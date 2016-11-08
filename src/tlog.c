@@ -28,6 +28,7 @@ _tlog(const char *parent_file, const char *parent_func, const char *format, ...)
 	va_end(ap);
 	/* end */
 	fprintf(log, "\n");
+	fflush(log);
 }
 
 void

@@ -8,10 +8,20 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "tlog.h"
+
+void
+begin(TL_V)
+{
+    tlog("hello %s", "1");
+}
+
 int
 main(int argc, char *argv[])
 {
-
+    tlog_open();
+    begin(TL_A);
+    tlog_close();
 	return EXIT_SUCCESS;
 }
 
