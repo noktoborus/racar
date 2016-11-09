@@ -16,7 +16,7 @@ tlog_open()
 }
 
 void
-_tlog(const char *parent_file, const char *parent_func, const char *format, ...)
+_tlog(const char *parent_func, const char *func, const char *format, ...)
 {
 	time_t t = 0u;
 	char tm_str[24] = {};
@@ -29,7 +29,7 @@ _tlog(const char *parent_file, const char *parent_func, const char *format, ...)
 	tm = gmtime(&t);
 	strftime(tm_str, sizeof(tm_str), "%b %e %T", tm);
 	/* begin */
-	fprintf(log, "[%s] [parent %s:%s] ", tm_str, parent_file, parent_func);
+	fprintf(log, "[%s] [%s(%s())] ", tm_str, parent_func, func);
 	/* data */
 	va_start(ap, format);
 	vfprintf(log, format, ap);
