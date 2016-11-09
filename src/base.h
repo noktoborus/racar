@@ -11,17 +11,22 @@
 #define NAME_SIZE 128
 #define NOID ((unsigned)-1)
 
-struct rcr_auth_group {
+struct rcr_agroup {
+	bool alive;
+
 	unsigned id;
 	char name[NAME_SIZE];
 };
 
-struct rcr_auth_group_perms {
+struct rcr_agroup_perms {
+	bool alive;
+
 	unsigned id;
 	unsigned gate_id;
-	unsigned group_id;
-	bool write;
-	bool read;
+	unsigned agroup_id;
+
+	bool allow_write;
+	bool allow_read;
 };
 
 struct rcr_team_member {
@@ -37,6 +42,8 @@ struct rcr_team {
 };
 
 struct rcr_gate {
+	bool alive;
+
 	unsigned id;
 	struct gate *parent;
 
@@ -47,11 +54,11 @@ struct rcr {
 	unsigned gates;
 	struct rcr_gate *gate;
 
-	unsigned perms;
-	struct rcr_auth_group_perms *perm;
+	unsigned aperms;
+	struct rcr_agroup_perms *aperm;
 
-	unsigned groups;
-	struct rcr_auth_group *group;
+	unsigned agroups;
+	struct rcr_agroup *agroup;
 
 	unsigned teams;
 	struct rcr_team *team;
@@ -61,7 +68,9 @@ struct rcr {
 };
 
 struct rcr_gate *rcr_add_gate(TL_V, struct rcr *r, const char *name);
-struct rcr_auth_group *rcr_add_group(TL_V, struct rcr *r, const char *name);
+struct rcr_agroup *rcr_add_agroup(TL_V, struct rcr *r, const char *name);
+
+void rcr_print(TL_V, struct rcr *r);
 
 #endif /* _SRC_BASE_1478530092_H_ */
 
