@@ -29,7 +29,7 @@ _tlog(const char *parent_func, const char *func, const char *format, ...)
 	tm = gmtime(&t);
 	strftime(tm_str, sizeof(tm_str), "%b %e %T", tm);
 	/* begin */
-	fprintf(log, "[%s] [%s(%s())] ", tm_str, parent_func, func);
+	fprintf(log, "[%s] [%s {%s}] ", tm_str, parent_func, func);
 	/* data */
 	va_start(ap, format);
 	vfprintf(log, format, ap);

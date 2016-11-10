@@ -23,29 +23,29 @@ rcr_add_gate(TL_V, struct rcr *r, const char *name)
 	}
 
 	/* alloc new perms */
-	tmp = realloc(r->aperm, (r->aperms + r->agroups) * sizeof(*r->aperm));
+	tmp = realloc(r->group_acl, (r->group_acls + r->agroups) * sizeof(*r->group_acl));
 	if (!tmp) {
 		tlog("realloc(%d) permissions fail: %s",
-				(r->aperms + r->agroups) * sizeof(*r->aperm), strerror(errno));
+				(r->group_acls + r->agroups) * sizeof(*r->group_acl), strerror(errno));
 		return NULL;
 	}
-	r->aperm = tmp;
+	r->group_acl = tmp;
 
 	/* update permission info */
 	for (id = 0u; id < r->agroups; id++) {
-		memset(&r->aperm[r->aperms], 0u, sizeof(*r->aperm));
+		memset(&r->group_acl[r->group_acls], 0u, sizeof(*r->group_acl));
 		if (r->agroup[id].alive) {
-			r->aperm[r->aperms].alive = true;
-			r->aperm[r->aperms].agroup_id = r->agroup[id].id;
+			r->group_acl[r->group_acls].alive = true;
+			r->group_acl[r->group_acls].agroup_id = r->agroup[id].id;
 		}
 
 		/* default permissions */
-		r->aperm[r->aperms].allow_write = false;
-		r->aperm[r->aperms].allow_read = false;
+		r->group_acl[r->group_acls].allow_write = false;
+		r->group_acl[r->group_acls].allow_read = false;
 		/* system info */
-		r->aperm[r->aperms].gate_id = r->gates;
-		r->aperm[r->aperms].id = r->aperms;
-		r->aperms++;
+		r->group_acl[r->group_acls].gate_id = r->gates;
+		r->group_acl[r->group_acls].id = r->group_acls;
+		r->group_acls++;
 	}
 
 	/* alloc new */
@@ -56,12 +56,12 @@ rcr_add_gate(TL_V, struct rcr *r, const char *name)
 		return NULL;
 	}
 	r->gate = tmp;
-
 	p = r->gate + r->gates;
-	p->id = r->gates;
-	p->alive = true;
-	snprintf(p->name, sizeof(p->name), "%s", name);
+	memset(p, 0u, sizeof(*p));
 
+	p->alive = true;
+	p->id = r->gates;
+	snprintf(p->name, sizeof(p->name), "%s", name);
 	r->gates++;
 
 	return p;
@@ -82,27 +82,27 @@ rcr_add_agroup(TL_V, struct rcr *r, const char *name)
 	}
 
 	/* add permissions */
-	tmp = realloc(r->aperm, (r->aperms + r->gates) * sizeof(*r->aperm));
+	tmp = realloc(r->group_acl, (r->group_acls + r->gates) * sizeof(*r->group_acl));
 	if (!tmp) {
 		tlog("relloc(%d) permissions fail: %s",
-				(r->aperms + r->agroups) * sizeof(*r->aperm), strerror(errno));
+				(r->group_acls + r->agroups) * sizeof(*r->group_acl), strerror(errno));
 		return NULL;
 	}
-	r->aperm = tmp;
+	r->group_acl = tmp;
 
 	for (id = 0u; id < r->gates; id++) {
-		memset(&r->aperm[r->aperms], 0u, sizeof(*r->aperm));
+		memset(&r->group_acl[r->group_acls], 0u, sizeof(*r->group_acl));
 		if (r->gate[id].alive) {
-			r->aperm[r->aperms].alive = true;
-			r->aperm[r->aperms].gate_id = r->gate[id].id;
+			r->group_acl[r->group_acls].alive = true;
+			r->group_acl[r->group_acls].gate_id = r->gate[id].id;
 		}
 		/* default permissions */
-		r->aperm[r->aperms].allow_write = false;
-		r->aperm[r->aperms].allow_read = false;
+		r->group_acl[r->group_acls].allow_write = false;
+		r->group_acl[r->group_acls].allow_read = false;
 		/* system */
-		r->aperm[r->aperms].gate_id = r->gates;
-		r->aperm[r->aperms].id = r->aperms;
-		r->aperms++;
+		r->group_acl[r->group_acls].gate_id = r->gates;
+		r->group_acl[r->group_acls].id = r->group_acls;
+		r->group_acls++;
 
 	}
 
@@ -115,10 +115,141 @@ rcr_add_agroup(TL_V, struct rcr *r, const char *name)
 	}
 
 	p = r->agroup + r->agroups;
+	memset(p, 0u, sizeof(*p));
+
 	p->alive = true;
+	p->id = r->agroups;
+	snprintf(p->name, sizeof(p->name), "%s", name);
 	r->agroups++;
 
 	return p;
+}
+
+struct rcr_gate *
+rcr_get_gate(TL_V, struct rcr *r, unsigned id)
+{
+	if (id != NOID) {
+		if (id >= r->gates) {
+			tlog("invalid gate id: %u, max id: %u", id, r->gates);
+			return NULL;
+		}
+	}
+
+	return &r->gate[id];
+}
+
+struct rcr_agroup *
+rcr_get_agroup(TL_V, struct rcr *r, unsigned id)
+{
+	if (id == NOID) {
+		return NULL;
+	}
+
+	if (id  >= r->agroups) {
+		tlog("invalid auth group id: %u, max id: %u", id, r->agroups);
+		return NULL;
+	}
+
+	return &r->agroup[id];
+}
+
+struct rcr_agroup_acl *
+rcr_get_acl(TL_V, struct rcr *r, unsigned agroup_id, unsigned gate_id)
+{
+	unsigned id = 0u;
+
+	if (!rcr_get_agroup(TL_A, r, agroup_id)) {
+		return NULL;
+	}
+
+	if (!rcr_get_gate(TL_A, r, agroup_id)) {
+		return NULL;
+	}
+
+	for (; id < r->group_acls; id++) {
+		if (r->group_acl[id].agroup_id != agroup_id)
+			continue;
+		if (r->group_acl[id].gate_id != gate_id)
+			continue;
+		if (!r->group_acl[id].alive) {
+			return &r->group_acl[id];
+		}
+	}
+
+	return NULL;
+}
+
+struct rcr_team *
+rcr_add_team(TL_V, struct rcr *r, const char *name)
+{
+	unsigned id = 0u;
+	void *tmp = NULL;
+	struct rcr_team *p = NULL;
+	/* check exists */
+	for (id = 0u; id < r->teams; id++) {
+		if (!strcmp(r->gate[id].name, name)) {
+			tlog("team '%s' already exists (id: %u)", name, id);
+			return NULL;
+		}
+	}
+
+	tmp = realloc(r->team, (r->teams + 1) * sizeof(*r->team));
+	if (!tmp) {
+		tlog("realloc(%d) teams fail: %s",
+				(r->teams + 1) * sizeof(*r->team), strerror(errno));
+		return NULL;
+	}
+
+	r->team = tmp;
+	p = r->team + r->teams;
+	memset(p, 0u, sizeof(*p));
+
+	p->alive = true;
+	p->id = r->teams;
+	snprintf(p->name, sizeof(p->name), "%s", name);
+	r->teams++;
+
+	return p;
+}
+
+struct rcr_team *
+rcr_get_team(TL_V, struct rcr *r, unsigned id)
+{
+	if (id == NOID)
+		return NULL;
+
+	if (id >= r->teams) {
+		tlog("invalid team id: %u, max id: %u", id, r->teams);
+		return NULL;
+	}
+
+	return &r->team[id];
+}
+
+bool
+rcr_team_start(TL_V, struct rcr *r, unsigned id, time_t time)
+{
+	struct rcr_team_attempt *ta = NULL;
+	struct rcr_team *team = NULL;
+
+	team = rcr_get_team(TL_A, r, id);
+	if (!team) {
+		return false;
+	}
+
+	/* TODO: ... */
+
+	return true;
+}
+
+void
+rcr_team_passage(TL_V, struct rcr *r, unsigned id, unsigned gate_id, time_t time, uint32_t penalty)
+{
+}
+
+void
+rcr_team_finish(TL_V, struct rcr *r, unsigned id, time_t time)
+{
 }
 
 void
