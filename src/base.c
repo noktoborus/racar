@@ -226,6 +226,28 @@ rcr_get_team(TL_V, struct rcr *r, unsigned id)
 	return &r->team[id];
 }
 
+static struct rcr_team_attempt *
+rcr_team_new_attempt(TL_V, struct rcr *r, struct rcr_team *team)
+{
+	struct rcr_team_attempt *ta = NULL;
+	void *tmp = NULL;
+
+	tmp = realloc(team->attempt, (team->attempts + 1) * sizeof(*team->attempt));
+	if (!tmp) {
+		tlog("team[%u:%s] realloc(%d) failed: %s",
+				team->id, team->name, ta->id,
+				(team->attempts + 1) * sizeof(*team->attempt),
+				strerror(errno));
+		return NULL;
+	}
+	team->attempt = tmp;
+
+	ta = &team->attempt[team->attempts];
+	team->attempts++;
+
+	return ta;
+}
+
 bool
 rcr_team_start(TL_V, struct rcr *r, unsigned id, time_t time)
 {
@@ -237,7 +259,28 @@ rcr_team_start(TL_V, struct rcr *r, unsigned id, time_t time)
 		return false;
 	}
 
-	/* TODO: ... */
+	if (team->attempts) {
+		ta = &team->attempt[team->attempts - 1];
+		if (ta->start && !ta->finish) {
+			tlog("team[%u:%s] attempt#%u not finished",
+					team->id, team->name, ta->id);
+			return false;
+		} else if (!ta->start) {
+			tlog("team[%u:%s] attempt#%u reinit: not started",
+					team->id, team->name, ta->id);
+			memcpy(&ta->start, &time, sizeof(time));
+		}
+	}
+
+	if (!ta || team->attempt[team->attempts - 1].finish) {
+		/* start new */
+		if ((ta = rcr_team_new_attempt(TL_A, r, team)) != NULL) {
+			memcpy(&ta->start, &time, sizeof(time));
+		}
+	}
+
+	if (!ta)
+		return false;
 
 	return true;
 }
