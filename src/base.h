@@ -40,6 +40,7 @@ struct rcr_team_member {
 
 struct rcr_team_gate {
 	time_t time;
+	unsigned gate_id;
 	uint32_t penalty;
 	struct rcr_team_gate *next;
 };
@@ -49,7 +50,6 @@ struct rcr_team_attempt {
 	unsigned team_id;
 	time_t start;
 	time_t finish;
-	struct rcr_team_attempt *next;
 	struct rcr_team_gate *gate;
 };
 
@@ -100,8 +100,8 @@ struct rcr_team *rcr_get_team(TL_V, struct rcr *r, unsigned id);
 struct rcr_agroup_acl *rcr_get_acl(TL_V, struct rcr *r, unsigned agroup_id, unsigned gate_id);
 
 bool rcr_team_start(TL_V, struct rcr *r, unsigned id, time_t time);
-void rcr_team_passage(TL_V, struct rcr *r, unsigned id, unsigned gate_id, time_t time, uint32_t penalty);
-void rcr_team_finish(TL_V, struct rcr *r, unsigned id, time_t time);
+bool rcr_team_passage(TL_V, struct rcr *r, unsigned id, unsigned gate_id, time_t time, uint32_t penalty);
+bool rcr_team_finish(TL_V, struct rcr *r, unsigned id, time_t time);
 
 void rcr_print(TL_V, struct rcr *r);
 

@@ -256,6 +256,7 @@ rcr_team_start(TL_V, struct rcr *r, unsigned id, time_t time)
 
 	team = rcr_get_team(TL_A, r, id);
 	if (!team) {
+		tlog("unknown team #%u", id);
 		return false;
 	}
 
@@ -285,14 +286,93 @@ rcr_team_start(TL_V, struct rcr *r, unsigned id, time_t time)
 	return true;
 }
 
-void
+bool
 rcr_team_passage(TL_V, struct rcr *r, unsigned id, unsigned gate_id, time_t time, uint32_t penalty)
 {
+	struct rcr_team_attempt *ta = NULL;
+	struct rcr_team *team = NULL;
+	struct rcr_gate *gate = NULL;
+	struct rcr_team_gate *tg = NULL;
+	struct rcr_team_gate *tg_prev = NULL;
+
+	/* get team */
+	if (!(team = rcr_get_team(TL_A, r, id))) {
+		tlog("unknown team #%u", id);
+		return false;
+	}
+
+	if (!team->attempts) {
+		tlog("team[%u:%s] no attempts", team->id, team->name);
+		return false;
+	}
+
+	/* get attempt */
+	if (!(ta = &team->attempt[team->attempts - 1])) {
+		tlog("team[%u:%s] attempt #%u not started",
+			   	team->id, team->name, ta->id);
+		return false;
+	}
+
+	/* check gate */
+	if (!(gate = rcr_get_gate(TL_A, r, gate_id))) {
+		tlog("team[%u:%s] can't get gate #%u for attempt #%u",
+				team->id, team->name, gate_id, ta->id);
+		return false;
+	}
+
+	/* check gate in attempt */
+	for (tg = ta->gate; tg; tg_prev = tg, tg = tg->next) {
+		if (tg->gate_id == gate_id) {
+			break;
+		}
+	}
+
+	/* TODO: check order rule (tg_prev) */
+
+	if (!tg) {
+		/* alloc new gate */
+		tg = calloc(1, sizeof(*tg));
+		if (!tg) {
+			tlog("team[%u:%s] can't allocate memory for gate #%u, attempt #%u: %s",
+					team->id, team->name, gate_id, ta->id, strerror(errno));
+			return false;
+		}
+		tg->gate_id = gate_id;
+	}
+
+	memcpy(&tg->time, &time, sizeof(tg->time));
+	tg->penalty = penalty;
+
+	return true;
 }
 
-void
+bool
 rcr_team_finish(TL_V, struct rcr *r, unsigned id, time_t time)
 {
+	struct rcr_team_attempt *ta = NULL;
+	struct rcr_team *team = NULL;
+
+	team = rcr_get_team(TL_A, r, id);
+	if (!team) {
+		tlog("unknown team #%u", id);
+		return false;
+	}
+
+	if (!team->attempts) {
+		tlog("team[%u:%s] no attempts", team->id, team->name);
+		return false;
+	}
+
+	ta = &team->attempt[team->attempts - 1];
+	if (!ta->start) {
+		tlog("team[%u:%s] attempt #%u not started",
+			   	team->id, team->name, ta->id);
+		return false;
+	}
+
+	memcpy(&ta->finish, &time, sizeof(ta->finish));
+
+	return true;
 }
 
 void
