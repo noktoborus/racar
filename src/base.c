@@ -344,6 +344,7 @@ rcr_team_passage(TL_V, struct rcr *r, unsigned id, unsigned gate_id, time_t time
 		} else {
 			ta->gate = tg;
 		}
+		ta->gates++;
 	}
 
 	memcpy(&tg->time, &time, sizeof(tg->time));
@@ -379,6 +380,47 @@ rcr_team_finish(TL_V, struct rcr *r, unsigned id, time_t time)
 	memcpy(&ta->finish, &time, sizeof(ta->finish));
 
 	return true;
+}
+
+void
+rcr_free_all(TL_V, struct rcr *r)
+{
+	unsigned tc = 0u;
+	unsigned tac = 0u;
+	unsigned team_count = 0u;
+	struct rcr_team_gate *tg = NULL;
+	struct rcr_team_gate *tg_next = NULL;
+	/* simple free */
+	team_count = r->teams;
+	tlog("free: gates: %u, group_acls: %u, agroups: %u, members: %u, teams: %u",
+			r->gates, r->group_acls, r->agroups, r->members, r->teams);
+
+	r->gates = 0u;
+	r->group_acls = 0u;
+	r->agroups = 0u;
+	r->members = 0u;
+	r->teams = 0u;
+
+	free(r->gate);
+	free(r->group_acl);
+	free(r->agroup);
+	free(r->member);
+
+	/* free team attempts */
+	for (tc = 0u; tc < team_count; tc++) {
+		tlog("free: team #%u attempts: %u",
+				r->team[tc].id, r->team[tc].attempts);
+		for (tac = 0u; tac < r->team[tc].attempts; tac++) {
+			tlog("free: team #%u attempt #%u, gates: %u",
+					r->team[tc].id, r->team[tc].attempt[tac].id,
+					r->team[tc].attempt[tac].gates);
+			for (tg = r->team[tc].attempt[tac].gate; tg; tg = tg_next) {
+				tg_next = tg->next;
+				free(tg);
+			}
+		}
+	}
+	free(r->team);
 }
 
 void

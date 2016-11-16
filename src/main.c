@@ -9,11 +9,14 @@
 #include <unistd.h>
 
 #include "tlog.h"
+#include "base.h"
 
 void
 begin(TL_V)
 {
-    tlog("hello %s", "1");
+	struct rcr rcr = {};
+
+	rcr_free_all(TL_A, &rcr);
 }
 
 int

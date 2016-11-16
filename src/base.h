@@ -50,6 +50,7 @@ struct rcr_team_attempt {
 	unsigned team_id;
 	time_t start;
 	time_t finish;
+	unsigned gates;
 	struct rcr_team_gate *gate;
 };
 
@@ -104,6 +105,9 @@ bool rcr_team_passage(TL_V, struct rcr *r, unsigned id, unsigned gate_id, time_t
 bool rcr_team_finish(TL_V, struct rcr *r, unsigned id, time_t time);
 
 void rcr_print(TL_V, struct rcr *r);
+
+
+void rcr_free_all(TL_V, struct rcr *r);
 
 #endif /* _SRC_BASE_1478530092_H_ */
 
