@@ -338,6 +338,12 @@ rcr_team_passage(TL_V, struct rcr *r, unsigned id, unsigned gate_id, time_t time
 			return false;
 		}
 		tg->gate_id = gate_id;
+		/* add to list */
+		if (tg_prev) {
+			tg_prev->next = tg;
+		} else {
+			ta->gate = tg;
+		}
 	}
 
 	memcpy(&tg->time, &time, sizeof(tg->time));
