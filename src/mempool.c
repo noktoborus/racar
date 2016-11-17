@@ -241,3 +241,34 @@ mmp_free(void *data)
 	free(mn);
 }
 
+char*
+mmp_strdup(struct mmp *m, char *src)
+{
+	char *data = NULL;
+	size_t len = 0u;
+
+	len = strlen(src);
+
+	if (!(data = mmp_malloc(m, len + 1))) {
+		return NULL;
+	}
+
+	memcpy(data, src, len);
+	data[len] = '\0';
+
+	return data;
+}
+
+void*
+mmp_memdup(struct mmp *m, void *src, size_t size)
+{
+	void *data = NULL;
+
+	if (!(data = mmp_malloc(m, size))) {
+		return NULL;
+	}
+
+	memcpy(data, src, size);
+	return data;
+}
+

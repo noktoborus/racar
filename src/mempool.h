@@ -9,7 +9,9 @@
 #include <stdlib.h>
 
 enum mmp_node_type {
-	/* use in mmp_malloc, mmp_calloc */
+	/* use in mmp_malloc, mmp_calloc,
+	 * mmp_strdup, mmp_memdup
+	 */
 	MMP_NORMAL = 0,
 	/* use in mmp_assign */
 	MMP_GENERIC = 1,
@@ -77,6 +79,16 @@ int mmp_assign_fd(struct mmp *m, int fd, void(*pclose)(int fd));
 void *mmp_realloc(void *data, size_t size);
 /* free data with mmp header */
 void mmp_free(void *data);
+
+
+/*
+ * return pointer to string or NULL when fail
+ */
+char *mmp_strdup(struct mmp *m, char *src);
+/*
+ * return pointer to data or NULL when fail
+ */
+void *mmp_memdup(struct mmp *m, void *src, size_t size);
 
 #endif /* _SRC_MEMPOOL_1479374773_H_ */
 
