@@ -25,7 +25,8 @@ struct mdl {
 	struct mmp *mmp;
 };
 
-struct mdl_node *mdl_add_node(TL_V, struct mdl *m, struct mdl_node *parent, const char *name);
+struct mdl_node *mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name);
+struct mdl_node *mdl_add_path(TL_V, struct mdl *m, struct mdl_node *root, const char *path);
 void mdl_del_node(TL_V, struct mdl_node *node);
 
 struct mdl_node *mdl_get_node(TL_V, struct mdl *m, struct mdl_node *root, const char *path);
