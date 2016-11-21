@@ -33,6 +33,8 @@ mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name)
 		m->child = mn;
 	}
 
+	mn->name_len = snprintf(mn->name, sizeof(mn->name), "%s", name);
+
 	return mn;
 }
 
@@ -168,8 +170,36 @@ mdl_get_node(TL_V, struct mdl *m, struct mdl_node *root, const char *path)
 }
 
 const char *
-mdl_get_path(TL_V, struct mdl *m, struct mdl_node *root, struct mdl_node *node)
+mdl_get_path(TL_V, struct mdl *m, struct mdl_node *root, struct mdl_node *node, struct mmp *mmp)
 {
-	return NULL;
+	size_t size = 0u;
+	struct mdl_node *mn = NULL;
+	char *path = NULL;
+
+	/* calc buffer size */
+	for (size = 0u, mn = node; mn; mn = mn->parent) {
+		size += (mn->name_len + 1);
+		if (mn == root)
+		   break;
+	}
+
+	/* allocate buffer */
+	path = mmp_calloc((mmp ? mmp : m->mmp), size + 1);
+	if (!path) {
+		tlog("calloc(%d) failed: %s", size + 1, strerror(errno));
+		return NULL;
+	}
+
+	/* copy name */
+	for (size = 0u, mn = node; mn; mn = mn->parent) {
+		size += (mn->name_len + 1);
+		strncat(path, mn->name, mn->name_len);
+		strcat(path, ".");
+		path[size] = '\0';
+		if (mn == root)
+			break;
+	}
+
+	return path;
 }
 
