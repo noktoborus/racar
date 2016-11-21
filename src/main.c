@@ -10,12 +10,22 @@
 
 #include "tlog.h"
 #include "base.h"
+#include "model.h"
+#include "mempool.h"
 
 void
 begin(TL_V)
 {
 	struct rcr rcr = {};
+	struct mdl mdl = {};
 
+	mdl.mmp = mmp_create();
+
+	mdl_add_path(TL_A, &mdl, NULL, "Gate");
+	mdl_add_path(TL_A, &mdl, NULL, "Gate.Start");
+	mdl_add_path(TL_A, &mdl, NULL, "Gate.Finish");
+
+	mmp_destroy(mdl.mmp);
 	rcr_free_all(TL_A, &rcr);
 }
 
