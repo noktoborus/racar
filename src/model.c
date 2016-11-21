@@ -54,7 +54,7 @@ mdl_iterate_path(TL_V, const char *path, const char **end, char name[MDL_NAME_LE
 
 	_end = (const char*)strchr(_begin, '.');
 	if (!_end) {
-		snprintf(name, MDL_NAME_LEN, "%s", _begin);
+		_end = (_begin + snprintf(name, MDL_NAME_LEN, "%s", _begin)) + 1;
 	} else {
 		/* copy name */
 		snprintf(name, MDL_NAME_LEN, "%.*s", (int)(_end - _begin), _begin);
