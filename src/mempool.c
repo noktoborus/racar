@@ -1,6 +1,7 @@
 /* vim: ft=c ff=unix fenc=utf-8
  * file: src/mempool.c
  */
+#include <stdio.h>
 #include <errno.h>
 #include <string.h>
 
@@ -64,8 +65,6 @@ mmp_destroy(struct mmp *m)
 static void
 _assign_node(struct mmp *m, struct mmp_node *mn)
 {
-	memset(mn, 0, sizeof(*mn));
-
 	mn->protector = mn;
 
 	if ((mn->next = m->next) != NULL) {
@@ -86,6 +85,7 @@ mmp_malloc(struct mmp *m, size_t size)
 	}
 
 	/* init */
+	memset(mn, 0, sizeof(*mn));
 	mn->type = MMP_NORMAL;
 	mn->v.gen.data = (void*)(mn + 1);
 	mn->size = size;
@@ -102,7 +102,6 @@ void *mmp_calloc(struct mmp *m, size_t size)
 	if (!(mn = calloc(1, sizeof(*mn) + size))) {
 		return NULL;
 	}
-
 	mn->type = MMP_NORMAL;
 	mn->v.gen.data = (void*)(mn + 1);
 	mn->size = size;
