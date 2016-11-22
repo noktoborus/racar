@@ -38,6 +38,8 @@ struct mdl_node *mdl_get_node(TL_V, struct mdl *m, struct mdl_node *root, const 
  *
  */
 const char *mdl_get_path(TL_V, struct mdl *m, struct mdl_node *root, struct mdl_node *node, struct mmp *mmp);
+/* print tree to log */
+void mdl_log_tree(TL_V, struct mdl *m, struct mdl_node *root);
 
 #endif /* _SRC_MODEL_1479373216_H_ */
 

@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include "model.h"
 
@@ -15,6 +16,18 @@ mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name)
 	tlog_trace("(m=%p, root=%p, name=%p [\"%s\"])",
 			(void*)m, (void*)root, (void*)name, name);
 
+	/* check exists */
+	for (mn = (root ? root->child : m->child); mn; mn = mn->next) {
+		if (!strcmp(mn->name, name)) {
+			break;
+		}
+	}
+
+	if (mn) {
+		return mn;
+	}
+
+	/* allocate new */
 	if (!(mn = mmp_calloc(m->mmp, sizeof(*mn)))) {
 		tlog("calloc(%d) failed: %s", sizeof(*mn), strerror(errno));
 		return NULL;
@@ -84,23 +97,11 @@ mdl_add_path(TL_V, struct mdl *m, struct mdl_node *root, const char *path)
 	const char *end = NULL;
 	char name[MDL_NAME_LEN] = {};
 	struct mdl_node *mn = NULL;
-	struct mdl_node *mn_next = NULL;
 
 	tlog_trace("(m=%p, root=%p, path=\"%s\")", (void*)m, (void*)root, path);
 
 	mn = root;
 	while (mdl_iterate_path(TL_A, path, &end, name) != 0u) {
-		/* check exists */
-		for (mn_next = mn; mn_next; mn_next = mn_next->next) {
-			if (!strcmp(mn_next->name, name)) {
-				break;
-			}
-		}
-		/* exists, switch to new node */
-		if (mn_next) {
-			mn = mn_next;
-			continue;
-		}
 		/* add to tree and switch to new node */
 		if (!(mn = mdl_add_node(TL_A, m, mn, name))) {
 			break;
@@ -220,5 +221,38 @@ mdl_get_path(TL_V, struct mdl *m, struct mdl_node *root, struct mdl_node *node, 
 	}
 
 	return path;
+}
+
+
+void
+mdl_log_dive_deep(TL_V, struct mdl_node *node, size_t level)
+{
+	if (!level) {
+		tlog("Model tree:", NULL);
+		mdl_log_dive_deep(TL_A, node, level + 1);
+		return;
+	}
+
+	tlog("%"PRIuPTR": %p \"%s\"", level, (void*)node, node->name);
+
+	if (node->child) {
+		mdl_log_dive_deep(TL_A, node->child, level + 1);
+	}
+
+	if (node->next) {
+		mdl_log_dive_deep(TL_A, node->next, level);
+	}
+}
+
+void
+mdl_log_tree(TL_V, struct mdl *m, struct mdl_node *root)
+{
+	tlog_trace("(m=%p, root=%p [%s])",
+			(void*)m, (void*)root, root ? root->name : "");
+	if (!root) {
+		root = m->child;
+	}
+
+	mdl_log_dive_deep(TL_A, root, 0u);
 }
 

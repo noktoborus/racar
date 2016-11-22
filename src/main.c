@@ -24,6 +24,11 @@ begin(TL_V)
 	mdl_add_path(TL_A, &mdl, NULL, "Gate");
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.Start");
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.Finish");
+	mdl_add_path(TL_A, &mdl, NULL, "User.Manage");
+	mdl_add_path(TL_A, &mdl, NULL, "User");
+	mdl_add_path(TL_A, &mdl, NULL, "Gate.1");
+
+	mdl_log_tree(TL_A, &mdl, NULL);
 
 	mmp_destroy(mdl.mmp);
 	rcr_free_all(TL_A, &rcr);
