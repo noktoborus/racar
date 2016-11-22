@@ -7,10 +7,31 @@
 #define TL_V const char *tlog_parent_func
 #define TL_A __func__
 
+enum tlog_level {
+	TLOG_NONE = 0,
+	TLOG_ALERT,
+	TLOG_CRIT,
+	TLOG_ERR,
+	TLOG_WARN,
+	TLOG_NOTICE,
+	TLOG_INFO,
+	TLOG_DEBUG,
+	TLOG_TRACE
+};
+
 void tlog_open();
 
-#define tlog(format, ...) _tlog(tlog_parent_func, __func__, format, __VA_ARGS__)
-void _tlog(const char *parent_func, const char *func, const char *format, ...);
+void _tlog(enum tlog_level tl, const char *parent_func, const char *func, const char *format, ...);
+
+#define tlog(format, ...) _tlog(TLOG_NONE, tlog_parent_func, __func__, format, __VA_ARGS__)
+#define tlog_alert(format, ...) _tlog(TLOG_TRACE, tlog_parent_func, __func__, format, __VA_ARGS__)
+#define tlog_critical(format, ...) _tlog(TLOG_TRACE, tlog_parent_func, __func__, format, __VA_ARGS__)
+#define tlog_error(format, ...) _tlog(TLOG_TRACE, tlog_parent_func, __func__, format, __VA_ARGS__)
+#define tlog_warn(format, ...) _tlog(TLOG_TRACE, tlog_parent_func, __func__, format, __VA_ARGS__)
+#define tlog_notice(format, ...) _tlog(TLOG_TRACE, tlog_parent_func, __func__, format, __VA_ARGS__)
+#define tlog_info(format, ...) _tlog(TLOG_TRACE, tlog_parent_func, __func__, format, __VA_ARGS__)
+#define tlog_debug(format, ...) _tlog(TLOG_TRACE, tlog_parent_func, __func__, format, __VA_ARGS__)
+#define tlog_trace(format, ...) _tlog(TLOG_TRACE, tlog_parent_func, __func__, format, __VA_ARGS__)
 
 void tlog_close();
 

@@ -16,20 +16,50 @@ tlog_open()
 }
 
 void
-_tlog(const char *parent_func, const char *func, const char *format, ...)
+_tlog(enum tlog_level tl, const char *parent_func, const char *func, const char *format, ...)
 {
 	time_t t = 0u;
 	char tm_str[24] = {};
 	struct tm *tm = NULL;
 	va_list ap = {};
+	char *lv = NULL;
 	if (!log)
 		return;
+
+	switch(tl) {
+		case TLOG_NONE:
+			break;
+		case TLOG_ALERT:
+			lv = "ALERT: ";
+			break;
+		case TLOG_CRIT:
+			lv = "CRITICAL: ";
+			break;
+		case TLOG_ERR:
+			lv = "ERROR: ";
+			break;
+		case TLOG_WARN:
+			lv = "WARNING: ";
+			break;
+		case TLOG_NOTICE:
+			lv = "NOTICE: ";
+			break;
+		case TLOG_INFO:
+			lv = "INFO: ";
+			break;
+		case TLOG_DEBUG:
+			lv = "DEBUG: ";
+			break;
+		case TLOG_TRACE:
+			lv = "TRACE: ";
+			break;
+	};
 
 	time(&t);
 	tm = gmtime(&t);
 	strftime(tm_str, sizeof(tm_str), "%b %e %T", tm);
 	/* begin */
-	fprintf(log, "[%s] [%s {%s}] ", tm_str, parent_func, func);
+	fprintf(log, "[%s] [%s {%s}] %s", tm_str, parent_func, func, lv ? lv : "");
 	/* data */
 	va_start(ap, format);
 	vfprintf(log, format, ap);
