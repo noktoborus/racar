@@ -21,6 +21,7 @@ begin(TL_V)
 
 	mdl.mmp = mmp_create();
 
+	mdl_add_path(TL_A, &mdl, NULL, "Gate.1.Path.3");
 	mdl_add_path(TL_A, &mdl, NULL, "Gate");
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.Start");
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.Finish");

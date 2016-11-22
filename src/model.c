@@ -186,10 +186,44 @@ mdl_get_node(TL_V, struct mdl *m, struct mdl_node *root, const char *path)
 	return mn;
 }
 
+
+static size_t
+mdl_str_reverse(char *buffer, size_t len)
+{
+	register char *begin = NULL;
+	register char *end = NULL;
+	register char tmp;
+
+	begin = buffer;
+	end = buffer + len;
+
+	for (; begin < end; begin++, end--) {
+		tmp = *begin;
+		*begin = *end;
+		*end = tmp;
+	}
+
+	return len;
+}
+
+/*
+ * return number of copied bytes
+ */
+static size_t
+mdl_strcpy_reverse(char *dst, const char *src, size_t len)
+{
+	register size_t i = 0u;
+	for (; i <= len; i++) {
+		dst[i] = src[len - i];
+	}
+	return i;
+}
+
 const char *
 mdl_get_path(TL_V, struct mdl *m, struct mdl_node *root, struct mdl_node *node, struct mmp *mmp)
 {
 	size_t size = 0u;
+	size_t path_size = 0u;
 	struct mdl_node *mn = NULL;
 	char *path = NULL;
 
@@ -197,50 +231,55 @@ mdl_get_path(TL_V, struct mdl *m, struct mdl_node *root, struct mdl_node *node, 
 			(void*)m, (void*)root, (void*)node, (void*)mmp);
 
 	/* calc buffer size */
-	for (size = 0u, mn = node; mn; mn = mn->parent) {
-		size += (mn->name_len + 1);
+	for (path_size = 0u, mn = node; mn; mn = mn->parent) {
+		path_size += (mn->name_len + 1);
 		if (mn == root)
 		   break;
 	}
 
 	/* allocate buffer */
-	path = mmp_calloc((mmp ? mmp : m->mmp), size + 1);
+	path_size += 2;
+	path = mmp_calloc((mmp ? mmp : m->mmp), path_size);
 	if (!path) {
-		tlog("calloc(%d) failed: %s", size + 1, strerror(errno));
+		tlog("calloc(%d) failed: %s", path_size, strerror(errno));
 		return NULL;
 	}
 
 	/* copy name */
 	for (size = 0u, mn = node; mn; mn = mn->parent) {
-		size += (mn->name_len + 1);
-		strncat(path, mn->name, mn->name_len);
-		strcat(path, ".");
-		path[size] = '\0';
+		path[size++] = '.';
+		size += mdl_strcpy_reverse(&path[size], mn->name, mn->name_len - 1);
 		if (mn == root)
 			break;
 	}
+
+	size = mdl_str_reverse(path, size - 1);
+	path[size] = '\0';
 
 	return path;
 }
 
 
-void
-mdl_log_dive_deep(TL_V, struct mdl_node *node, size_t level)
+static void
+mdl_log_dive_deep(TL_V, struct mdl *m, struct mdl_node *node, unsigned level, unsigned child)
 {
+	const char *path = NULL;
 	if (!level) {
-		tlog("Model tree:", NULL);
-		mdl_log_dive_deep(TL_A, node, level + 1);
+		tlog_info("Model tree:", NULL);
+		mdl_log_dive_deep(TL_A, m, node, level + 1, 1u);
 		return;
 	}
 
-	tlog("%"PRIuPTR": %p \"%s\"", level, (void*)node, node->name);
+	path = mdl_get_path(TL_A, m, NULL, node, NULL);
+	tlog_info("%*s %u. %s [%s]", 3 * (level - 1), "", child, node->name, path);
+	mmp_free((void*)path);
 
 	if (node->child) {
-		mdl_log_dive_deep(TL_A, node->child, level + 1);
+		mdl_log_dive_deep(TL_A, m, node->child, level + 1, 1u);
 	}
 
 	if (node->next) {
-		mdl_log_dive_deep(TL_A, node->next, level);
+		mdl_log_dive_deep(TL_A, m, node->next, level, child + 1);
 	}
 }
 
@@ -253,6 +292,6 @@ mdl_log_tree(TL_V, struct mdl *m, struct mdl_node *root)
 		root = m->child;
 	}
 
-	mdl_log_dive_deep(TL_A, root, 0u);
+	mdl_log_dive_deep(TL_A, m, root, 0u, 0u);
 }
 
