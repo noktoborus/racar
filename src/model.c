@@ -12,6 +12,9 @@ mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name)
 {
 	struct mdl_node *mn = NULL;
 
+	tlog_trace("(m=%p, root=%p, name=%p [\"%s\"])",
+			(void*)m, (void*)root, (void*)name, name);
+
 	if (!(mn = mmp_calloc(m->mmp, sizeof(*mn)))) {
 		tlog("calloc(%d) failed: %s", sizeof(*mn), strerror(errno));
 		return NULL;
@@ -44,6 +47,9 @@ mdl_iterate_path(TL_V, const char *path, const char **end, char name[MDL_NAME_LE
 	const char *_end = NULL;
 	const char *_begin = NULL;
 
+	tlog_trace("(path=%p [\"%s\"], end=%p [*end=%p], name=\"%s\")",
+			(void*)path, path, (void*)end, (end ? *end : NULL), name);
+
 	*name = '\0';
 
 	if (end && *end) {
@@ -52,14 +58,18 @@ mdl_iterate_path(TL_V, const char *path, const char **end, char name[MDL_NAME_LE
 		_begin = path;
 	}
 
+	if (*_begin == '.') {
+		_begin++;
+	} else if (!*_begin) {
+		return 0u;
+	}
+
 	_end = (const char*)strchr(_begin, '.');
 	if (!_end) {
-		_end = (_begin + snprintf(name, MDL_NAME_LEN, "%s", _begin)) + 1;
+		_end = (_begin + snprintf(name, MDL_NAME_LEN, "%s", _begin));
 	} else {
 		/* copy name */
 		snprintf(name, MDL_NAME_LEN, "%.*s", (int)(_end - _begin), _begin);
-		/* skip '.' */
-		_end++;
 	}
 
 	if (end) {
@@ -75,6 +85,8 @@ mdl_add_path(TL_V, struct mdl *m, struct mdl_node *root, const char *path)
 	char name[MDL_NAME_LEN] = {};
 	struct mdl_node *mn = NULL;
 	struct mdl_node *mn_next = NULL;
+
+	tlog_trace("(m=%p, root=%p, path=\"%s\")", (void*)m, (void*)root, path);
 
 	mn = root;
 	while (mdl_iterate_path(TL_A, path, &end, name) != 0u) {
@@ -105,6 +117,8 @@ mdl_del_node(TL_V, struct mdl_node *node)
 	if (!node)
 		return;
 
+	tlog_trace("(node=%p)", (void*)node);
+
 	/* unlink */
 	if (node->parent != NULL) {
 		if (node->parent->child == node) {
@@ -132,6 +146,8 @@ mdl_get_node(TL_V, struct mdl *m, struct mdl_node *root, const char *path)
 	const char *end = NULL;
 	char name[MDL_NAME_LEN] = {};
 	struct mdl_node *mn = NULL;
+
+	tlog_trace("(m=%p, root=%p, path=\"%s\")", (void*)m, (void*)root, path);
 
 	if (root) {
 		/* search in root children's */
@@ -175,6 +191,9 @@ mdl_get_path(TL_V, struct mdl *m, struct mdl_node *root, struct mdl_node *node, 
 	size_t size = 0u;
 	struct mdl_node *mn = NULL;
 	char *path = NULL;
+
+	tlog_trace("(m=%p, root=%p, node=%p, mmp=%p)",
+			(void*)m, (void*)root, (void*)node, (void*)mmp);
 
 	/* calc buffer size */
 	for (size = 0u, mn = node; mn; mn = mn->parent) {
