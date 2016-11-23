@@ -117,6 +117,30 @@ module_register_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN]
 	snprintf(mn->name, sizeof(mn->name), "%s", name);
 }
 
+static const char *
+mm_strtype(enum module_type mt)
+{
+
+	switch (mt) {
+		case MODULE_ADD:
+			return "add";
+			break;
+		case MODULE_DEL:
+			return "del";
+			break;
+		case MODULE_GET:
+			return "get";
+			break;
+		case MODULE_SET:
+			return "set";
+			break;
+		case MODULE_REFRESH:
+			return "refresh";
+			break;
+	}
+	return NULL;
+}
+
 void *
 mm_get_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN], enum module_data_type *data_type)
 {
@@ -156,7 +180,7 @@ mm_get_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN], enum mo
 		}
 	}
 
-	tlog_warn("module '%s' not found for type %d", name, mt);
+	tlog_warn("module '%s' not found for type %s", name, mm_strtype(mt));
 
 	return NULL;
 }
