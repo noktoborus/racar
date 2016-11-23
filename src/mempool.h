@@ -76,7 +76,7 @@ int mmp_assign_fd(struct mmp *m, int fd, void(*pclose)(int fd));
  * ->free(data) when fail
  * if node type != MMP_NORMAL, return NULL and not not deallocated
  */
-void *mmp_realloc(void *data, size_t size);
+void *mmp_realloc(struct mmp *m, void *data, size_t size);
 /* free data with mmp header */
 void mmp_free(void *data);
 

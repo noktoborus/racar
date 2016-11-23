@@ -170,14 +170,17 @@ _get_header(void *data)
 }
 
 void *
-mmp_realloc(void *data, size_t size)
+mmp_realloc(struct mmp *m, void *data, size_t size)
 {
 	register struct mmp_node *mn_prev = NULL;
 	register struct mmp_node *mn_next = NULL;
-	struct mmp *m = NULL;
 
 	struct mmp_node *mn = NULL;
 	register void *tmp = NULL;
+
+	if (!data) {
+		return mmp_malloc(m, size);
+	}
 
 	if (!(mn = _get_header(data))) {
 		return NULL;
