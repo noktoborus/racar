@@ -8,5 +8,6 @@ set(CMAKE_C_FLAGS "-std=c99 -Wall")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_executable(racar src/main.c src/tlog.c src/base.c src/mempool.c src/model.c src/model_module.c)
+target_link_libraries(racar dl)
 
 

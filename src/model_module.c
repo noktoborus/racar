@@ -4,11 +4,17 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <dlfcn.h>
+#include <linux/limits.h>
 #include "model_module.h"
 
 struct module_root {
 	struct mmp *mmp;
 
+	/* function link validating */
+	size_t epoch;
+
+	/* function lists */
 	struct module_node *refresh;
 
 	struct module_node *get;
@@ -17,15 +23,25 @@ struct module_root {
 	struct module_node *add;
 	struct module_node *del;
 
+	/* counters */
 	size_t refresh_count;
 	size_t get_count;
 	size_t set_count;
 	size_t add_count;
 	size_t del_count;
+
+	struct module_library *libs;
+};
+
+struct module_library {
+	char path[PATH_MAX];
+	void *handle;
+	struct module_library *next;
 };
 
 struct module_node {
 	bool active;
+	struct module_library *lib;
 	char name[MODULE_NAME_LEN];
 	/* for getter and setter */
 	enum module_data_type data_type;
@@ -38,19 +54,44 @@ static struct module_root root;
 void
 mm_initialize(TL_V)
 {
+	/*struct module_library *ml = NULL;*/
+
+	/* fix reinitialization */
 	mm_deinitialize(TL_A);
+	/* increment epoch */
+	root.epoch++;
+
 	if (!root.mmp) {
 		root.mmp = mmp_create();
 	}
+
+	/* TODO: load dlopen(...) to module_library */
+
 }
 
 void
 mm_deinitialize(TL_V)
 {
+	size_t epoch = 0u;
+	struct module_library *ml = NULL;
+
+	/* save epoch */
+	epoch = root.epoch;
+
+	if (root.libs) {
+		for (ml = root.libs; ml; ml = ml->next) {
+			if (ml->handle) {
+				dlclose(ml->handle);
+				ml->handle = NULL;
+			}
+		}
+	}
 	if (!root.mmp) {
 		mmp_destroy(root.mmp);
 	}
 	memset(&root, 0, sizeof(root));
+	/* restore epoch */
+	root.epoch = epoch;
 }
 
 static struct module_node *
@@ -88,6 +129,11 @@ static void
 module_register_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN], void (*func)(void*))
 {
 	struct module_node *mn = NULL;
+
+	if (!root.mmp) {
+		tlog("module_model not initialized", NULL);
+		return;
+	}
 
 	switch (mt) {
 		case MODULE_ADD:
@@ -141,6 +187,7 @@ mm_strtype(enum module_type mt)
 	return NULL;
 }
 
+#if 0
 void *
 mm_get_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN], enum module_data_type *data_type)
 {
@@ -184,7 +231,7 @@ mm_get_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN], enum mo
 
 	return NULL;
 }
-
+#endif
 void
 mm_reg_refresh(const char name[MODULE_NAME_LEN], module_refresh *func)
 {
@@ -201,5 +248,26 @@ void
 mm_reg_del(const char name[MODULE_NAME_LEN], module_del *func)
 {
 	module_register_func(TL_A, MODULE_DEL, name, (void(*)(void*))func);
+}
+
+bool
+mm_link_func(TL_V, struct module_func_link *link,  enum module_type mt, const char name[MODULE_NAME_LEN], enum module_data_type *data_type)
+{
+	/* TODO: ... */
+	return false;
+}
+
+void *
+mm_get_func(TL_V, struct module_func_link *link, enum module_data_type mdt)
+{
+	void *func = NULL;
+
+	if (link->epoch != root.epoch) {
+		/* TODO: get new pointer */
+	}
+
+	/* TODO: ... */
+
+	return func;
 }
 

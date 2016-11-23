@@ -37,14 +37,26 @@ enum module_data_type {
 	MODULE_UINT
 };
 
+struct module_func_link {
+	size_t epoch;
+
+	void *func;
+
+	enum module_type mt;
+	enum module_data_type mdt;
+	char name[MODULE_NAME_LEN];
+};
+
 #define MODULE_NONE 0
 
 /* init */
 void mm_initialize(TL_V);
 void mm_deinitialize(TL_V);
 
-/* return func and data type */
-void *mm_get_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN], enum module_data_type *data_type);
+/* set pointer to func */
+bool mm_link_func(TL_V, struct module_func_link *link,  enum module_type mt, const char name[MODULE_NAME_LEN], enum module_data_type *data_type);
+/* safety get func for call by link */
+void *mm_get_func(TL_V, struct module_func_link *link, enum module_data_type mdt);
 
 /* register */
 void mm_reg_refresh(const char name[MODULE_NAME_LEN], module_refresh *func);
