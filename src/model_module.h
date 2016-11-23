@@ -8,14 +8,14 @@
 
 #define MODULE_NAME_LEN 80
 
-typedef void (*module_refresh)(struct mdl *m, struct mdl_node *node);
+typedef void (*module_refresh)(struct mdl *m, struct mdl_node *node, const char *node_path);
 
-typedef void (*module_add)(struct mdl *m, struct mdl_node *node);
-typedef void (*module_del)(struct mdl *m, struct mdl_node *node);
+typedef void (*module_add)(struct mdl *m, struct mdl_node *node, const char *node_path);
+typedef void (*module_del)(struct mdl *m, struct mdl_node *node, const char *node_path);
 
-typedef bool (*module_get_int)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, long *value);
-typedef bool (*module_get_uint)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, unsigned long *value);
-typedef bool (*module_get_str)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, const char **value);
+typedef bool (*module_get_int)(struct mdl *m, struct mdl_node *node, const char *node_path, struct mmp *mmp, long *value);
+typedef bool (*module_get_uint)(struct mdl *m, struct mdl_node *node, const char *node_path, struct mmp *mmp, unsigned long *value);
+typedef bool (*module_get_str)(struct mdl *m, struct mdl_node *node, const char *node_path, struct mmp *mmp, const char **value);
 
 typedef bool (*module_set_int)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, long value);
 typedef bool (*module_set_uint)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, unsigned long value);
