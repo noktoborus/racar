@@ -18,10 +18,18 @@ tlog_open()
 void
 _tlog(enum tlog_level tl, const char *parent_func, const char *func, const char *format, ...)
 {
+	va_list ap;
+	va_start(ap, format);
+	_vtlog(tl, parent_func, func, format, ap);
+	va_end(ap);
+}
+
+void
+_vtlog(enum tlog_level tl, const char *parent_func, const char *func, const char *format, va_list ap)
+{
 	time_t t = 0u;
 	char tm_str[24] = {};
 	struct tm *tm = NULL;
-	va_list ap = {};
 	char *lv = NULL;
 	if (!log)
 		return;
@@ -61,9 +69,7 @@ _tlog(enum tlog_level tl, const char *parent_func, const char *func, const char 
 	/* begin */
 	fprintf(log, "[%s] %s[%s {%s}] ", tm_str, lv ? lv : "", parent_func, func);
 	/* data */
-	va_start(ap, format);
 	vfprintf(log, format, ap);
-	va_end(ap);
 	/* end */
 	fprintf(log, "\n");
 	fflush(log);

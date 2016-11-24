@@ -4,6 +4,8 @@
 #ifndef _SRC_TLOG_1478609591_H_
 #define _SRC_TLOG_1478609591_H_
 
+#include <stdarg.h>
+
 #define TL_V const char *tlog_parent_func
 #define TL_A __func__
 
@@ -22,6 +24,7 @@ enum tlog_level {
 void tlog_open();
 
 void _tlog(enum tlog_level tl, const char *parent_func, const char *func, const char *format, ...);
+void _vtlog(enum tlog_level tl, const char *parent_func, const char *func, const char *format, va_list ap);
 
 #define tlog(format, ...) _tlog(TLOG_NONE, tlog_parent_func, __func__, format, __VA_ARGS__)
 #define tlog_alert(format, ...) _tlog(TLOG_ALERT, tlog_parent_func, __func__, format, __VA_ARGS__)
