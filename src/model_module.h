@@ -5,6 +5,7 @@
 #define _SRC_MODEL_MODULE_1479896182_H_
 
 #include "model.h"
+#include "tlog.h"
 
 #define MODULE_NAME_LEN 80
 
@@ -68,7 +69,7 @@ void mm_reg_get();
 void mm_reg_set();
 
 /* modules' utils */
-void mm_log(const char *format);
+void mm_log(enum tlog_level level, const char *format, ...);
 
 #endif /* _SRC_MODEL_MODULE_1479896182_H_ */
 

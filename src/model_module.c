@@ -288,3 +288,12 @@ mm_get_func(TL_V, struct module_func_link *link, enum module_data_type *mdt)
 	return link->func;
 }
 
+void
+mm_log(enum tlog_level level, const char *format, ...)
+{
+	/* TODO: add module name to log */
+	va_list ap;
+	va_start(ap, format);
+	_vtlog(level, "model_module", "unknown", format, ap);
+	va_end(ap);
+}
