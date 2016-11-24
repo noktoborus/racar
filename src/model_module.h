@@ -54,9 +54,9 @@ void mm_initialize(TL_V);
 void mm_deinitialize(TL_V);
 
 /* set pointer to func */
-bool mm_link_func(TL_V, struct module_func_link *link,  enum module_type mt, const char name[MODULE_NAME_LEN], enum module_data_type *data_type);
-/* safety get func for call by link */
-void *mm_get_func(TL_V, struct module_func_link *link, enum module_data_type mdt);
+bool mm_link_func(TL_V, struct module_func_link *link, enum module_type mt, const char name[MODULE_NAME_LEN]);
+/* safety get func for call by link, return data type in mdt */
+void *mm_get_func(TL_V, struct module_func_link *link, enum module_data_type *mdt);
 
 /* register */
 void mm_reg_refresh(const char name[MODULE_NAME_LEN], module_refresh *func);

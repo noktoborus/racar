@@ -1,6 +1,8 @@
 /* vim: ft=c ff=unix fenc=utf-8
  * file: src/model_module.c
  */
+#include <inttypes.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -55,11 +57,15 @@ void
 mm_initialize(TL_V)
 {
 	/*struct module_library *ml = NULL;*/
-
 	/* fix reinitialization */
 	mm_deinitialize(TL_A);
 	/* increment epoch */
-	root.epoch++;
+	if (!(++root.epoch)) {
+		/* fix 'zero' epoch */
+		root.epoch++;
+	}
+
+	tlog_info("model module initialization, epoch: %"PRIuPTR, root.epoch);
 
 	if (!root.mmp) {
 		root.mmp = mmp_create();
@@ -110,7 +116,7 @@ module_add_list(TL_V, struct module_node **list, size_t *count)
 
 	tmp = mmp_realloc(root.mmp, *list, sizeof(struct module_node) * (_count + 1));
 	if (!tmp) {
-		tlog("realloc(%d) failed: %s",
+		tlog_warn("realloc(%d) failed: %s",
 				sizeof(struct module_node) * (_count + 1), strerror(errno));
 		return NULL;
 	}
@@ -131,7 +137,7 @@ module_register_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN]
 	struct module_node *mn = NULL;
 
 	if (!root.mmp) {
-		tlog("module_model not initialized", NULL);
+		tlog_warn("module_model not initialized", NULL);
 		return;
 	}
 
@@ -154,7 +160,7 @@ module_register_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN]
 	};
 
 	if (!mn) {
-		tlog("register func failed", NULL);
+		tlog_warn("register func failed", NULL);
 		return;
 	}
 
@@ -187,14 +193,39 @@ mm_strtype(enum module_type mt)
 	return NULL;
 }
 
-#if 0
-void *
-mm_get_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN], enum module_data_type *data_type)
+void
+mm_reg_refresh(const char name[MODULE_NAME_LEN], module_refresh *func)
+{
+	module_register_func(TL_A, MODULE_REFRESH, name, (void(*)(void*))func);
+}
+
+void
+mm_reg_add(const char name[MODULE_NAME_LEN], module_add *func)
+{
+	module_register_func(TL_A, MODULE_ADD, name, (void(*)(void*))func);
+}
+
+void
+mm_reg_del(const char name[MODULE_NAME_LEN], module_del *func)
+{
+	module_register_func(TL_A, MODULE_DEL, name, (void(*)(void*))func);
+}
+
+bool
+mm_link_func(TL_V, struct module_func_link *link, enum module_type mt, const char name[MODULE_NAME_LEN])
 {
 	size_t i = 0u;
-	size_t count = 0;
+	size_t count = 0u;
 	struct module_node *mn = NULL;
 
+	/* initialization */
+	link->epoch = root.epoch;
+	link->mdt = MODULE_NONE;
+	link->mt = mt;
+	snprintf(link->name, sizeof(link->name), "%s", name);
+	link->func = NULL;
+
+	/* search */
 	switch (mt) {
 		case MODULE_ADD:
 			mn = root.add;
@@ -220,54 +251,40 @@ mm_get_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN], enum mo
 
 	for (i = 0u; i < count; i++) {
 		if (!strncmp(mn[i].name, name, MODULE_NAME_LEN)) {
-			if (data_type) {
-				*data_type = mn[i].data_type;
-			}
-			return mn[i].func;
+			link->mdt = mn[i].data_type;
+			link->func = mn[i].func;
+			link->mt = mt;
+			return true;
 		}
 	}
 
-	tlog_warn("module '%s' not found for type %s", name, mm_strtype(mt));
+	tlog_warn("module '%s:%s' not found in %"PRIuPTR" epoch",
+		   	mm_strtype(mt), name, root.epoch);
 
-	return NULL;
-}
-#endif
-void
-mm_reg_refresh(const char name[MODULE_NAME_LEN], module_refresh *func)
-{
-	module_register_func(TL_A, MODULE_REFRESH, name, (void(*)(void*))func);
-}
-
-void
-mm_reg_add(const char name[MODULE_NAME_LEN], module_add *func)
-{
-	module_register_func(TL_A, MODULE_ADD, name, (void(*)(void*))func);
-}
-
-void
-mm_reg_del(const char name[MODULE_NAME_LEN], module_del *func)
-{
-	module_register_func(TL_A, MODULE_DEL, name, (void(*)(void*))func);
-}
-
-bool
-mm_link_func(TL_V, struct module_func_link *link,  enum module_type mt, const char name[MODULE_NAME_LEN], enum module_data_type *data_type)
-{
-	/* TODO: ... */
 	return false;
 }
 
 void *
-mm_get_func(TL_V, struct module_func_link *link, enum module_data_type mdt)
+mm_get_func(TL_V, struct module_func_link *link, enum module_data_type *mdt)
 {
-	void *func = NULL;
-
-	if (link->epoch != root.epoch) {
-		/* TODO: get new pointer */
+	if (!link->epoch) {
+		/* not initialized */
+		tlog_notice("call to uninitialized link", NULL);
+		return NULL;
 	}
 
-	/* TODO: ... */
+	if (link->epoch != root.epoch) {
+		if (!mm_link_func(TL_A, link, link->mt, link->name)) {
+			tlog_warn("link to '%s:%s' not valid in %"PRIuPTR" epoch",
+				   	mm_strtype(link->mt), link->name, root.epoch);
+			return NULL;
+		}
+	}
 
-	return func;
+	if (mdt) {
+		*mdt = link->mdt;
+	}
+
+	return link->func;
 }
 
