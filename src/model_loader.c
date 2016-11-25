@@ -4,6 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #include "tlog.h"
 #include "mempool.h"
@@ -14,9 +15,42 @@
 static bool
 _mload_load(TL_V, struct mmp *mmp, struct mdl *mdl, FILE *f)
 {
+	char line[4096] = {};
+	struct mdl_node *mn = NULL;
+
+	char *begin;
+	char *end;
+
+	size_t lineno = 0u;
 	tlog_trace("(mdl=%p, mdl=%p, f=%p)", (void*)mmp, (void*)mdl, (void*)f);
-	/* TODO */
-	return false;
+	while (!feof(f)) {
+		lineno++;
+		if (!fgets(line, sizeof(line), f)) {
+			tlog("can't get line %"PRIuPTR, lineno);
+			break;
+		}
+		begin = line;
+		if (isblank(*begin)) {
+			/* not a path, skip spaces */
+			while (isblank(*(++begin)));
+		} else {
+			/* get model path */
+			if (!(end = strpbrk(begin, " \t"))) {
+				mn = mdl_add_path(TL_A, mdl, NULL, begin);
+			} else {
+				*end = '\0';
+				mn = mdl_add_path(TL_A, mdl, NULL, begin);
+			}
+			begin = end + 1;
+		}
+		/* TODO: get args */
+		/* skip empty line */
+		if (!*begin) {
+			continue;
+		}
+		/* TODO: ... */
+	}
+	return true;
 }
 
 bool
