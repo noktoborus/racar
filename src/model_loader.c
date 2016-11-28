@@ -13,14 +13,25 @@
 #include "model_module.h"
 #include "model_loader.h"
 
+static void
+_mload_parse_attribute(TL_V, struct mmp *mmp, struct mdl *mdl, struct mdl_node *mn, const char *attrib, const char *filename, size_t lineno)
+{
+	tlog_trace("(mmp=%p, mdl=%p, mn=%p [%s], attrib=%p [%s], filename=%p [%s], lineno=%"PRIuPTR")",
+			(void*)mmp, (void*)mdl, (void*)mn, mn ? mn->name : "",
+			(void*)attrib, (attrib ? attrib : ""),
+			(void*)filename, filename ? filename : "", lineno);
+
+}
+
 static char *
-_mload_load_attribute(TL_V, struct mmp *mmp, struct mdl *mdl, struct mdl_node *mn, char *begin)
+_mload_load_attribute(TL_V, struct mmp *mmp, struct mdl *mdl, struct mdl_node *mn, char *begin, const char *filename, size_t lineno)
 {
 	char *end = NULL;
 
-	tlog_trace("(mmp=%p, mdl=%p, mn=%p [%s], begin=%p [%s])",
+	tlog_trace("(mmp=%p, mdl=%p, mn=%p [%s], begin=%p [%s], filename=%p [%s], lineno=%"PRIuPTR")",
 			(void*)mmp, (void*)mdl, (void*)mn, mn ? mn->name : "",
-			(void*)begin, (begin ? begin : ""));
+			(void*)begin, (begin ? begin : ""),
+			(void*)filename, filename ? filename : "", lineno);
 
 	if (!begin) {
 		return NULL;
@@ -41,8 +52,7 @@ _mload_load_attribute(TL_V, struct mmp *mmp, struct mdl *mdl, struct mdl_node *m
 		end = begin + strlen(begin);
 	}
 
-	/* TODO: parse attribute */
-	tlog_debug("got attribute: %s", begin);
+	_mload_parse_attribute(TL_A, mmp, mdl, mn, begin, filename, lineno);
 
 	*end = '\0';
 
@@ -50,20 +60,21 @@ _mload_load_attribute(TL_V, struct mmp *mmp, struct mdl *mdl, struct mdl_node *m
 }
 
 static bool
-_mload_load(TL_V, struct mmp *mmp, struct mdl *mdl, FILE *f)
+_mload_load(TL_V, struct mmp *mmp, struct mdl *mdl, FILE *f, const char *filename)
 {
 	char line[4096] = {};
 	struct mdl_node *mn = NULL;
-	char *begin;
-	char *end;
+	char *begin = NULL;
+	char *end = NULL;
 	size_t lineno = 0u;
 
-	tlog_trace("(mdl=%p, mdl=%p, f=%p)", (void*)mmp, (void*)mdl, (void*)f);
+	tlog_trace("(mdl=%p, mdl=%p, f=%p, filename=%p [%s])", (void*)mmp, (void*)mdl, (void*)f,
+			(void*)filename, filename ? filename : "");
 
 	while (!feof(f)) {
 		lineno++;
 		if (!fgets(line, sizeof(line), f)) {
-			tlog("can't get line %"PRIuPTR, lineno);
+			tlog("can't get line %s:%"PRIuPTR, filename, lineno);
 			break;
 		}
 		begin = line;
@@ -83,11 +94,11 @@ _mload_load(TL_V, struct mmp *mmp, struct mdl *mdl, FILE *f)
 			}
 			begin = end;
 		} else if (!mn) {
-			tlog_notice("invalid line %"PRIuPTR": node path not defined", lineno);
+			tlog_notice("invalid line %s:%"PRIuPTR": node path not defined", filename, lineno);
 			continue;
 		}
 		/* process arguments */
-		while ((begin = _mload_load_attribute(TL_A, mmp, mdl, mn, begin)) != NULL);
+		while ((begin = _mload_load_attribute(TL_A, mmp, mdl, mn, begin, filename, lineno)) != NULL);
 	}
 	return true;
 }
@@ -109,7 +120,7 @@ mload_load(TL_V, struct mdl *mdl, const char *file)
 
 	f = (FILE*)mmp_assign(mmp, (void*)fopen(file, "r"), (void(*)(void*))fclose);
 	if (f) {
-		r = _mload_load(TL_A, mmp, mdl, f);
+		r = _mload_load(TL_A, mmp, mdl, f, file);
 	} else {
 		tlog_notice("can't open '%s': %s", file, strerror(errno));
 	}
