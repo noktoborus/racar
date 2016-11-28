@@ -13,6 +13,8 @@
 #include "model.h"
 #include "mempool.h"
 
+#include "model_loader.h"
+
 void
 begin(TL_V)
 {
@@ -28,6 +30,8 @@ begin(TL_V)
 	mdl_add_path(TL_A, &mdl, NULL, "User.Manage");
 	mdl_add_path(TL_A, &mdl, NULL, "User");
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.1");
+
+	mload_load(TL_A, &mdl, "etc/model.txt");
 
 	mdl_log_tree(TL_A, &mdl, NULL);
 
