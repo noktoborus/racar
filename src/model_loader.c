@@ -16,11 +16,28 @@
 static void
 _mload_parse_attribute(TL_V, struct mmp *mmp, struct mdl *mdl, struct mdl_node *mn, const char *attrib, const char *filename, size_t lineno)
 {
+	const char *v = NULL;
 	tlog_trace("(mmp=%p, mdl=%p, mn=%p [%s], attrib=%p [%s], filename=%p [%s], lineno=%"PRIuPTR")",
 			(void*)mmp, (void*)mdl, (void*)mn, mn ? mn->name : "",
 			(void*)attrib, (attrib ? attrib : ""),
 			(void*)filename, filename ? filename : "", lineno);
 
+	if (!strncmp(attrib, "get=", 4)) {
+		v = attrib + 4;
+		/* TODO */
+	} else if (!strncmp(attrib, "set=", 4)) {
+		v = attrib + 4;
+		/* TODO */
+	} else if (!strncmp(attrib, "refresh=", 8)) {
+		v = attrib + 8;
+		/* TODO */
+	} else if (!strncmp(attrib, "del=", 4)) {
+		v = attrib + 4;
+		/* TODO */
+	} else if (!strncmp(attrib, "add=", 4)) {
+		v = attrib + 4;
+		/* TODO */
+	}
 }
 
 static char *

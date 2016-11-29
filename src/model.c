@@ -8,6 +8,12 @@
 
 #include "model.h"
 
+void
+mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator *dal)
+{
+	/* TODO */
+}
+
 struct mdl_node *
 mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name)
 {

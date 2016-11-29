@@ -4,8 +4,8 @@
 #ifndef _SRC_MODEL_MODULE_1479896182_H_
 #define _SRC_MODEL_MODULE_1479896182_H_
 
-#include "model.h"
 #include "tlog.h"
+#include "model.h"
 
 #define MODULE_NAME_LEN 80
 
