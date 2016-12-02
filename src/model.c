@@ -14,6 +14,17 @@ mdl_alloc(struct mmp *mmp)
 	return mmp_malloc(mmp, sizeof(struct mdl_node));
 }
 
+static void*
+mdl_copy(void *src, struct mmp *mmp)
+{
+	void *ptr = NULL;
+	if ((ptr = mmp_malloc(mmp, sizeof(struct mdl_node))) != NULL) {
+		memcpy(ptr, src, sizeof(struct mdl_node));
+	}
+
+	return ptr;
+}
+
 static void
 mdl_free(void *ptr, struct mmp *mmp)
 {
@@ -26,6 +37,7 @@ mdl_init(TL_V, struct mdl *m)
 	m->mmp = mmp_create();
 	m->allocator = (mdl_allocator)mdl_alloc;
 	m->deallocator = (mdl_deallocator)mdl_free;
+	m->copier = (mdl_copier)mdl_copy;
 	m->allocator_data = m->mmp;
 }
 
@@ -40,31 +52,34 @@ mdl_deinit(TL_V, struct mdl *m)
 }
 
 bool
-mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator dal, void *allocator_data)
+mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator dal, mdl_copier cop, void *allocator_data)
 {
-	tlog_trace("(m=%p, al=%p, dal=%p)", (void*)m, (void(*)(void))al, (void(*)(void*))dal);
-	if (!al || !dal) {
-		tlog_notice("allocator not setted: allocator=%p, deallocator=%p",
-				(void(*)(void*))al, (void(*)(void*))dal);
+	tlog_trace("(m=%p, al=%p, dal=%p, cop=%p, allocator_data=%p)",
+			(void*)m, (void(*)(void))al, (void(*)(void))dal, (void(*)(void))cop, allocator_data);
+	if (!al || !dal || !cop) {
+		tlog_notice("allocator not setted: allocator=%p, deallocator=%p, copier=%p",
+				(void(*)(void))al, (void(*)(void))dal, (void(*)(void))cop);
 		return false;
 	}
 
-	tlog_debug("set new allocator: allocator=%p, deallocator=%p, old: %p, %p",
-			(void(*)(void))al, (void(*)(void))dal,
-			(void(*)(void))m->allocator, (void(*)(void))m->deallocator);
+	tlog_debug("set new allocator: allocator=%p, deallocator=%p, copier=%p, old: %p, %p, %p",
+			(void(*)(void))al, (void(*)(void))dal, (void(*)(void))cop,
+			(void(*)(void))m->allocator, (void(*)(void))m->deallocator, (void(*)(void))m->copier);
 	m->allocator = al;
 	m->deallocator = dal;
+	m->copier = cop;
 	m->allocator_data = allocator_data;
 	return true;
 }
 
-struct mdl_node *
-mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name)
+static struct mdl_node *
+mdl_alloc_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name, struct mdl_node *source)
 {
 	struct mdl_node *mn = NULL;
 
-	tlog_trace("(m=%p, root=%p, name=%p [\"%s\"])",
-			(void*)m, (void*)root, (void*)name, name);
+	tlog_trace("(m=%p, root=%p, name=%p [%s], source=%p)",
+			(void*)m, (void*)root, (void*)name, name ? name : "",
+			(void*)source);
 
 	/* check exists */
 	for (mn = (root ? root->child : m->child); mn; mn = mn->next) {
@@ -77,13 +92,19 @@ mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name)
 		return mn;
 	}
 
-	/* allocate new */
-	if (!(mn = (*m->allocator)(m->allocator_data))) {
-		tlog("calloc(%d) failed: %s", sizeof(*mn), strerror(errno));
-		return NULL;
-	}
+	if (!source) {
+		/* allocate new */
+		if (!(mn = (*m->allocator)(m->allocator_data))) {
+			tlog("calloc(%d) failed: %s", sizeof(*mn), strerror(errno));
+			return NULL;
+		}
 
-	memset(mn, 0u, sizeof(*mn));
+		memset(mn, 0u, sizeof(*mn));
+	} else {
+		if (!(mn = (*m->copier)(source, m->allocator_data))) {
+			return NULL;
+		}
+	}
 
 	if (root) {
 		/* attach to parent */
@@ -104,6 +125,15 @@ mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name)
 	mn->name_len = snprintf(mn->name, sizeof(mn->name), "%s", name);
 
 	return mn;
+
+}
+
+struct mdl_node *
+mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name)
+{
+	tlog_trace("(m=%p, root=%p, name=%p [%s])",
+			(void*)m, (void*)root, (void*)name, name);
+	return mdl_alloc_node(TL_A, m, root, name, NULL);
 }
 
 static size_t
@@ -112,8 +142,9 @@ mdl_iterate_path(TL_V, const char *path, const char **end, char name[MDL_NAME_LE
 	const char *_end = NULL;
 	const char *_begin = NULL;
 
-	tlog_trace("(path=%p [\"%s\"], end=%p [*end=%p], name=\"%s\")",
-			(void*)path, path, (void*)end, (end ? *end : NULL), name);
+	tlog_trace("(path=%p [%s], end=%p [*end=%p], name=%p [%s])",
+			(void*)path, path, (void*)end, (end ? *end : NULL),
+			(void*)name, name ? name : "");
 
 	*name = '\0';
 
@@ -150,7 +181,8 @@ mdl_add_path(TL_V, struct mdl *m, struct mdl_node *root, const char *path)
 	char name[MDL_NAME_LEN] = {0};
 	struct mdl_node *mn = NULL;
 
-	tlog_trace("(m=%p, root=%p, path=\"%s\")", (void*)m, (void*)root, path);
+	tlog_trace("(m=%p, root=%p, path=%p [%s])",
+			(void*)m, (void*)root, (void*)path, path ? path : "");
 
 	mn = root;
 	while (mdl_iterate_path(TL_A, path, &end, name) != 0u) {
@@ -205,7 +237,8 @@ mdl_get_node(TL_V, struct mdl *m, struct mdl_node *root, const char *path)
 	char name[MDL_NAME_LEN] = {0};
 	struct mdl_node *mn = NULL;
 
-	tlog_trace("(m=%p, root=%p, path=\"%s\")", (void*)m, (void*)root, path);
+	tlog_trace("(m=%p, root=%p, path=%p [%s])",
+			(void*)m, (void*)root, (void*)path, path ? path : "");
 
 	if (root) {
 		/* search in root children's */
@@ -349,5 +382,19 @@ mdl_log_tree(TL_V, struct mdl *m, struct mdl_node *root)
 	}
 
 	mdl_log_dive_deep(TL_A, m, root, 0u, 0u);
+}
+
+struct mdl_node *
+mdl_copy_node(TL_V, struct mdl *m, struct mdl_node *parent, struct mdl_node *new_name, struct mdl_node *source)
+{
+	struct mdl_node *mn = NULL;
+	return NULL;
+}
+
+struct mdl_node *
+mdl_copy_path(TL_V, struct mdl *m, struct mdl_node *parent, struct mdl_node *new_name, const char *source)
+{
+	struct mdl_node *mn = NULL;
+	return NULL;
 }
 

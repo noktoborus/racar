@@ -23,10 +23,12 @@ struct mdl_node {
 
 typedef void*(*mdl_allocator)(void *data);
 typedef void(*mdl_deallocator)(void *ptr, void *data);
+typedef void*(*mdl_copier)(void *ptr, void *data);
 
 struct mdl {
 	mdl_allocator allocator;
 	mdl_deallocator deallocator;
+	mdl_copier copier;
 	void *allocator_data;
 
 	struct mdl_node *child;
@@ -37,13 +39,27 @@ struct mdl {
 void mdl_init(TL_V, struct mdl *m);
 void mdl_deinit(TL_V, struct mdl *m);
 
-bool mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator dal, void *allocator_data);
+bool mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator dal, mdl_copier cop, void *allocator_data);
 
-/* control */
+/*
+ * add node to *root by path or name
+ * add to m->child when root is NULL
+ */
 struct mdl_node *mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name);
 struct mdl_node *mdl_add_path(TL_V, struct mdl *m, struct mdl_node *root, const char *path);
+/*
+ * delete *node with all childs
+ */
 void mdl_del_node(TL_V, struct mdl *m, struct mdl_node *node);
 
+/*
+ * copy and attach node *source to parent with new_name by node or by path
+ * attach to m->child when *parent is NULL
+ */
+struct mdl_node *mdl_copy_node(TL_V, struct mdl *m, struct mdl_node *parent, struct mdl_node *new_name, struct mdl_node *source);
+struct mdl_node *mdl_copy_path(TL_V, struct mdl *m, struct mdl_node *parent, struct mdl_node *new_name, const char *source);
+
+/* get node by path */
 struct mdl_node *mdl_get_node(TL_V, struct mdl *m, struct mdl_node *root, const char *path);
 /*
  * return string, allocated in mempool module

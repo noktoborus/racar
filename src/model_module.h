@@ -66,8 +66,10 @@ struct mm_model_ext {
 void mm_initialize(TL_V);
 void mm_deinitialize(TL_V);
 
+/* model allocator */
 void *mm_model_allocator(void *data);
 void mm_model_deallocator(void *ptr, void *data);
+void *mm_model_copier(void *src, void *data);
 
 /* set pointer to func */
 bool mm_link_func(TL_V, struct mm_func_link *link, enum mm_type mt, const char name[MODULE_NAME_LEN]);

@@ -66,6 +66,17 @@ mm_model_deallocator(void *ptr, void *data)
 	mmp_free(ptr);
 }
 
+void *
+mm_model_copier(void *src, void *data)
+{
+	void *ptr = NULL;
+	if ((ptr = mmp_malloc(data, sizeof(struct mm_model_ext))) != NULL) {
+		memcpy(ptr, src, sizeof(struct mdl_node));
+	}
+
+	return ptr;
+}
+
 void
 mm_initialize(TL_V)
 {

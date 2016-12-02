@@ -1,3 +1,12 @@
+Templates.Rule.Name
+Templates.Rule.Value
+Templates.Rule.Extra
+Templates.Rule.Extra.Home
+Templates.Rule.Extra.Position
+Templates.Rule.Extra.Nominal
+
+Rule.
+	template
 Team.1.Name get=1
 	refresh=2
 Team.2.Name
