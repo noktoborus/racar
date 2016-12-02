@@ -105,7 +105,7 @@ mm_deinitialize(TL_V)
 			}
 		}
 	}
-	if (!root.mmp) {
+	if (root.mmp) {
 		mmp_destroy(root.mmp);
 	}
 	memset(&root, 0, sizeof(root));
