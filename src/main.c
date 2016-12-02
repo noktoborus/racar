@@ -22,6 +22,9 @@ begin(TL_V)
 	struct rcr rcr = {0};
 	struct mdl mdl = {0};
 
+	struct mdl_node *mn_dst = NULL;
+	struct mdl_node *mn_src = NULL;
+
 	/* init */
 	mdl_init(TL_A, &mdl);
 	mm_initialize(TL_A);
@@ -29,14 +32,18 @@ begin(TL_V)
 
 	/* work */
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.1.Path.3");
-	mdl_add_path(TL_A, &mdl, NULL, "Gate");
+	mn_dst = mdl_add_path(TL_A, &mdl, NULL, "Gate");
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.Start");
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.Finish");
+
+	mn_src = mdl_add_path(TL_A, &mdl, NULL, "User");
 	mdl_add_path(TL_A, &mdl, NULL, "User.Manage");
-	mdl_add_path(TL_A, &mdl, NULL, "User");
+
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.1");
 
 	mload_load(TL_A, &mdl, "etc/model.txt");
+
+	mdl_copy_node(TL_A, &mdl, mn_dst, "X", mn_src);
 
 	mdl_log_tree(TL_A, &mdl, NULL);
 

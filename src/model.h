@@ -56,8 +56,8 @@ void mdl_del_node(TL_V, struct mdl *m, struct mdl_node *node);
  * copy and attach node *source to parent with new_name by node or by path
  * attach to m->child when *parent is NULL
  */
-struct mdl_node *mdl_copy_node(TL_V, struct mdl *m, struct mdl_node *parent, struct mdl_node *new_name, struct mdl_node *source);
-struct mdl_node *mdl_copy_path(TL_V, struct mdl *m, struct mdl_node *parent, struct mdl_node *new_name, const char *source);
+struct mdl_node *mdl_copy_node(TL_V, struct mdl *m, struct mdl_node *parent, const char *new_name, struct mdl_node *source);
+struct mdl_node *mdl_copy_path(TL_V, struct mdl *m, struct mdl_node *parent, const char *new_name, const char *source);
 
 /* get node by path */
 struct mdl_node *mdl_get_node(TL_V, struct mdl *m, struct mdl_node *root, const char *path);

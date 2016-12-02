@@ -84,7 +84,16 @@ mdl_alloc_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name, str
 	/* check exists */
 	for (mn = (root ? root->child : m->child); mn; mn = mn->next) {
 		if (!strcmp(mn->name, name)) {
-			break;
+			if (!source) {
+				break;
+			} else {
+				const char *xpath = NULL;
+				xpath = mdl_get_path(TL_A,
+						m, NULL, (root ? root->child : m->child),  NULL);
+				tlog_notice("node %s already exists in path: %s", name, xpath);
+				mmp_free((void*)xpath);
+				return NULL;
+			}
 		}
 	}
 
@@ -104,6 +113,11 @@ mdl_alloc_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name, str
 		if (!(mn = (*m->copier)(source, m->allocator_data))) {
 			return NULL;
 		}
+		/* unlink from all */
+		mn->next = NULL;
+		mn->prev = NULL;
+		mn->parent = NULL;
+		mn->child = NULL;
 	}
 
 	if (root) {
@@ -385,14 +399,34 @@ mdl_log_tree(TL_V, struct mdl *m, struct mdl_node *root)
 }
 
 struct mdl_node *
-mdl_copy_node(TL_V, struct mdl *m, struct mdl_node *parent, struct mdl_node *new_name, struct mdl_node *source)
+mdl_copy_node(TL_V, struct mdl *m, struct mdl_node *parent, const char *new_name, struct mdl_node *source)
 {
+	struct mdl_node *mn_parent = NULL;
 	struct mdl_node *mn = NULL;
+
+	tlog_trace("(m=%p, parent=%p, new_name=%p [%s], source=%p [%s])",
+			(void*)m, (void*)parent, parent ? parent->name : "",
+			(void*)new_name, new_name ? new_name : new_name,
+			(void*)source, source ? source->name : "");
+
+	/* copy new root */
+	if (!(mn_parent = mdl_alloc_node(TL_A, m, parent, new_name, source))) {
+		return NULL;
+	}
+
+	for (mn = source->child; mn; mn = mn->next) {
+		if (mn->child) {
+			mdl_copy_node(TL_A, m, mn_parent, mn->name, mn);
+		} else {
+			mdl_alloc_node(TL_A, m, mn_parent, mn->name, source);
+		}
+	}
+
 	return NULL;
 }
 
 struct mdl_node *
-mdl_copy_path(TL_V, struct mdl *m, struct mdl_node *parent, struct mdl_node *new_name, const char *source)
+mdl_copy_path(TL_V, struct mdl *m, struct mdl_node *parent, const char *new_name, const char *source)
 {
 	struct mdl_node *mn = NULL;
 	return NULL;
