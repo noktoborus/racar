@@ -8,10 +8,52 @@
 
 #include "model.h"
 
-void
-mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator *dal)
+static void *
+mdl_alloc(size_t size, struct mmp *mmp)
 {
-	/* TODO */
+	return mmp_malloc(mmp, size);
+}
+
+static void
+mdl_free(void *ptr, struct mmp *mmp)
+{
+	return mmp_free(ptr);
+}
+
+void
+mdl_init(TL_V, struct mdl *m)
+{
+	m->mmp = mmp_create();
+	m->allocator = (mdl_allocator)mdl_alloc;
+	m->deallocator = (mdl_deallocator)mdl_free;
+	m->allocator_data = m->mmp;
+}
+
+void
+mdl_deinit(TL_V, struct mdl *m)
+{
+	while (m->child)
+	{
+		mdl_del_node(TL_A, m, m->child);
+	}
+	mmp_destroy(m->mmp);
+}
+
+void
+mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator dal, void *allocator_data)
+{
+	tlog_trace("(m=%p, al=%p, dal=%p)", (void*)m, (void*)al, (void*)dal);
+	if (!al || !dal) {
+		tlog_notice("allocator not setted: allocator=%p, deallocator=%p", (void*)al, (void*)dal);
+		return;
+	}
+
+	tlog_debug("set new allocator: allocator=%p, deallocator=%p, old: %p, %p",
+			(void*)al, (void*)dal,
+			(void*)m->allocator, (void*)m->deallocator);
+	m->allocator = al;
+	m->deallocator = dal;
+	m->allocator_data = allocator_data;
 }
 
 struct mdl_node *
@@ -34,10 +76,12 @@ mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name)
 	}
 
 	/* allocate new */
-	if (!(mn = mmp_calloc(m->mmp, sizeof(*mn)))) {
+	if (!(mn = (*m->allocator)(sizeof(*mn), m->allocator_data))) {
 		tlog("calloc(%d) failed: %s", sizeof(*mn), strerror(errno));
 		return NULL;
 	}
+
+	memset(mn, 0u, sizeof(*mn));
 
 	if (root) {
 		/* attach to parent */
@@ -118,13 +162,14 @@ mdl_add_path(TL_V, struct mdl *m, struct mdl_node *root, const char *path)
 }
 
 void
-mdl_del_node(TL_V, struct mdl_node *node)
+mdl_del_node(TL_V, struct mdl *m, struct mdl_node *node)
 {
+	tlog_trace("(mdl=%p, node=%p [%s])",
+			(void*)m, (void*)node, node ? node->name : "");
+
 	/* delete tree */
 	if (!node)
 		return;
-
-	tlog_trace("(node=%p)", (void*)node);
 
 	/* unlink */
 	if (node->parent != NULL) {
@@ -141,10 +186,14 @@ mdl_del_node(TL_V, struct mdl_node *node)
 
 	/* delete childs */
 	while (node->child) {
-		mdl_del_node(TL_A, node->child);
+		mdl_del_node(TL_A, m, node->child);
 	}
 
-	free(node);
+	if (m->child == node) {
+		m->child = node->next ? node->next : node->prev;
+	}
+
+	(*m->deallocator)(node, m->allocator_data);
 }
 
 struct mdl_node *
@@ -191,7 +240,6 @@ mdl_get_node(TL_V, struct mdl *m, struct mdl_node *root, const char *path)
 
 	return mn;
 }
-
 
 static size_t
 mdl_str_reverse(char *buffer, size_t len)

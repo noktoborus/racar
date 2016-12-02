@@ -54,6 +54,9 @@ struct module_func_link {
 void mm_initialize(TL_V);
 void mm_deinitialize(TL_V);
 
+void *mm_model_allocator(size_t size, void *data);
+void mm_model_deallocator(void *ptr, void *data);
+
 /* set pointer to func */
 bool mm_link_func(TL_V, struct module_func_link *link, enum module_type mt, const char name[MODULE_NAME_LEN]);
 /* safety get func for call by link, return data type in mdt */

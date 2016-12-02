@@ -21,22 +21,28 @@ struct mdl_node {
 	size_t name_len;
 };
 
-typedef void(*mdl_allocator)(size_t size);
-typedef void(*mdl_deallocator)(void *ptr);
+typedef void*(*mdl_allocator)(size_t size, void *data);
+typedef void(*mdl_deallocator)(void *ptr, void *data);
 
 struct mdl {
 	mdl_allocator allocator;
 	mdl_deallocator deallocator;
+	void *allocator_data;
 
 	struct mdl_node *child;
 	struct mmp *mmp;
 };
 
-void mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator *dal);
+/* configure */
+void mdl_init(TL_V, struct mdl *m);
+void mdl_deinit(TL_V, struct mdl *m);
 
+void mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator dal, void *allocator_data);
+
+/* control */
 struct mdl_node *mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name);
 struct mdl_node *mdl_add_path(TL_V, struct mdl *m, struct mdl_node *root, const char *path);
-void mdl_del_node(TL_V, struct mdl_node *node);
+void mdl_del_node(TL_V, struct mdl *m, struct mdl_node *node);
 
 struct mdl_node *mdl_get_node(TL_V, struct mdl *m, struct mdl_node *root, const char *path);
 /*

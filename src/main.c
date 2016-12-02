@@ -21,7 +21,7 @@ begin(TL_V)
 	struct rcr rcr = {};
 	struct mdl mdl = {};
 
-	mdl.mmp = mmp_create();
+	mdl_init(TL_A, &mdl);
 
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.1.Path.3");
 	mdl_add_path(TL_A, &mdl, NULL, "Gate");
@@ -35,7 +35,7 @@ begin(TL_V)
 
 	mdl_log_tree(TL_A, &mdl, NULL);
 
-	mmp_destroy(mdl.mmp);
+	mdl_deinit(TL_A, &mdl);
 	rcr_free_all(TL_A, &rcr);
 }
 
