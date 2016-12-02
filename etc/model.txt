@@ -1,5 +1,7 @@
 Team.1.Name get=1
 	refresh=2
 Team.2.Name
+	invalid
+		multiline attribute
 Team.3.Name
 Team.4.Name

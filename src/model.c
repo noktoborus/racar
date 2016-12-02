@@ -9,9 +9,9 @@
 #include "model.h"
 
 static void *
-mdl_alloc(size_t size, struct mmp *mmp)
+mdl_alloc(struct mmp *mmp)
 {
-	return mmp_malloc(mmp, size);
+	return mmp_malloc(mmp, sizeof(struct mdl_node));
 }
 
 static void
@@ -39,14 +39,14 @@ mdl_deinit(TL_V, struct mdl *m)
 	mmp_destroy(m->mmp);
 }
 
-void
+bool
 mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator dal, void *allocator_data)
 {
 	tlog_trace("(m=%p, al=%p, dal=%p)", (void*)m, (void(*)(void))al, (void(*)(void*))dal);
 	if (!al || !dal) {
 		tlog_notice("allocator not setted: allocator=%p, deallocator=%p",
 				(void(*)(void*))al, (void(*)(void*))dal);
-		return;
+		return false;
 	}
 
 	tlog_debug("set new allocator: allocator=%p, deallocator=%p, old: %p, %p",
@@ -55,6 +55,7 @@ mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator dal, vo
 	m->allocator = al;
 	m->deallocator = dal;
 	m->allocator_data = allocator_data;
+	return true;
 }
 
 struct mdl_node *
@@ -77,7 +78,7 @@ mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name)
 	}
 
 	/* allocate new */
-	if (!(mn = (*m->allocator)(sizeof(*mn), m->allocator_data))) {
+	if (!(mn = (*m->allocator)(m->allocator_data))) {
 		tlog("calloc(%d) failed: %s", sizeof(*mn), strerror(errno));
 		return NULL;
 	}

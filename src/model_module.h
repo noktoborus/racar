@@ -9,22 +9,22 @@
 
 #define MODULE_NAME_LEN 80
 
-typedef void (*module_void)(void);
+typedef void (*mm_void)(void);
 
-typedef void (*module_refresh)(struct mdl *m, struct mdl_node *node, const char *node_path);
+typedef void (*mm_refresh)(struct mdl *m, struct mdl_node *node, const char *node_path);
 
-typedef void (*module_add)(struct mdl *m, struct mdl_node *node, const char *node_path);
-typedef void (*module_del)(struct mdl *m, struct mdl_node *node, const char *node_path);
+typedef void (*mm_add)(struct mdl *m, struct mdl_node *node, const char *node_path);
+typedef void (*mm_del)(struct mdl *m, struct mdl_node *node, const char *node_path);
 
-typedef bool (*module_get_int)(struct mdl *m, struct mdl_node *node, const char *node_path, struct mmp *mmp, long *value);
-typedef bool (*module_get_uint)(struct mdl *m, struct mdl_node *node, const char *node_path, struct mmp *mmp, unsigned long *value);
-typedef bool (*module_get_str)(struct mdl *m, struct mdl_node *node, const char *node_path, struct mmp *mmp, const char **value);
+typedef bool (*mm_get_int)(struct mdl *m, struct mdl_node *node, const char *node_path, struct mmp *mmp, long *value);
+typedef bool (*mm_get_uint)(struct mdl *m, struct mdl_node *node, const char *node_path, struct mmp *mmp, unsigned long *value);
+typedef bool (*mm_get_str)(struct mdl *m, struct mdl_node *node, const char *node_path, struct mmp *mmp, const char **value);
 
-typedef bool (*module_set_int)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, long value);
-typedef bool (*module_set_uint)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, unsigned long value);
-typedef bool (*module_set_str)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, const char *value);
+typedef bool (*mm_set_int)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, long value);
+typedef bool (*mm_set_uint)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, unsigned long value);
+typedef bool (*mm_set_str)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, const char *value);
 
-enum module_type {
+enum mm_type {
 	MODULE_REFRESH = 1,
 
 	MODULE_ADD,
@@ -34,20 +34,30 @@ enum module_type {
 	MODULE_SET,
 };
 
-enum module_data_type {
+enum mm_data_type {
 	MODULE_STR = 1,
 	MODULE_INT,
 	MODULE_UINT
 };
 
-struct module_func_link {
+struct mm_func_link {
 	size_t epoch;
 
-	module_void func;
+	mm_void func;
 
-	enum module_type mt;
-	enum module_data_type mdt;
+	enum mm_type mt;
+	enum mm_data_type mdt;
 	char name[MODULE_NAME_LEN];
+};
+
+struct mm_model_ext {
+	struct mdl_node model;
+
+	struct mm_func_link refresh;
+	struct mm_func_link get;
+	struct mm_func_link set;
+	struct mm_func_link add;
+	struct mm_func_link del;
 };
 
 #define MODULE_NONE 0
@@ -56,19 +66,19 @@ struct module_func_link {
 void mm_initialize(TL_V);
 void mm_deinitialize(TL_V);
 
-void *mm_model_allocator(size_t size, void *data);
+void *mm_model_allocator(void *data);
 void mm_model_deallocator(void *ptr, void *data);
 
 /* set pointer to func */
-bool mm_link_func(TL_V, struct module_func_link *link, enum module_type mt, const char name[MODULE_NAME_LEN]);
+bool mm_link_func(TL_V, struct mm_func_link *link, enum mm_type mt, const char name[MODULE_NAME_LEN]);
 /* safety get func for call by link, return data type in mdt */
-module_void mm_get_func(TL_V, struct module_func_link *link, enum module_data_type *mdt);
+mm_void mm_get_func(TL_V, struct mm_func_link *link, enum mm_data_type *mdt);
 
 /* register */
-void mm_reg_refresh(const char name[MODULE_NAME_LEN], module_refresh func);
+void mm_reg_refresh(const char name[MODULE_NAME_LEN], mm_refresh func);
 
-void mm_reg_add(const char name[MODULE_NAME_LEN], module_add func);
-void mm_reg_del(const char name[MODULE_NAME_LEN], module_del func);
+void mm_reg_add(const char name[MODULE_NAME_LEN], mm_add func);
+void mm_reg_del(const char name[MODULE_NAME_LEN], mm_del func);
 
 void mm_reg_get();
 void mm_reg_set();

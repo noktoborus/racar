@@ -14,6 +14,7 @@
 #include "mempool.h"
 
 #include "model_loader.h"
+#include "model_module.h"
 
 void
 begin(TL_V)
@@ -22,6 +23,8 @@ begin(TL_V)
 	struct mdl mdl = {0};
 
 	mdl_init(TL_A, &mdl);
+	mm_initialize(TL_A);
+	mdl_set_allocator(TL_A, &mdl, mm_model_allocator, mm_model_deallocator, mdl.mmp);
 
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.1.Path.3");
 	mdl_add_path(TL_A, &mdl, NULL, "Gate");
@@ -36,6 +39,7 @@ begin(TL_V)
 	mdl_log_tree(TL_A, &mdl, NULL);
 
 	mdl_deinit(TL_A, &mdl);
+	mm_deinitialize(TL_A);
 	rcr_free_all(TL_A, &rcr);
 }
 

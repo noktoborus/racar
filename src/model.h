@@ -21,7 +21,7 @@ struct mdl_node {
 	size_t name_len;
 };
 
-typedef void*(*mdl_allocator)(size_t size, void *data);
+typedef void*(*mdl_allocator)(void *data);
 typedef void(*mdl_deallocator)(void *ptr, void *data);
 
 struct mdl {
@@ -37,7 +37,7 @@ struct mdl {
 void mdl_init(TL_V, struct mdl *m);
 void mdl_deinit(TL_V, struct mdl *m);
 
-void mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator dal, void *allocator_data);
+bool mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator dal, void *allocator_data);
 
 /* control */
 struct mdl_node *mdl_add_node(TL_V, struct mdl *m, struct mdl_node *root, const char *name);

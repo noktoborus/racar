@@ -11,20 +11,20 @@
 
 #include "model_module.h"
 
-struct module_root {
+struct mm_root {
 	struct mmp *mmp;
 
 	/* function link validating */
 	size_t epoch;
 
 	/* function lists */
-	struct module_node *refresh;
+	struct mm_node *refresh;
 
-	struct module_node *get;
-	struct module_node *set;
+	struct mm_node *get;
+	struct mm_node *set;
 
-	struct module_node *add;
-	struct module_node *del;
+	struct mm_node *add;
+	struct mm_node *del;
 
 	/* counters */
 	size_t refresh_count;
@@ -33,31 +33,43 @@ struct module_root {
 	size_t add_count;
 	size_t del_count;
 
-	struct module_library *libs;
+	struct mm_library *libs;
 };
 
-struct module_library {
+struct mm_library {
 	char path[PATH_MAX];
 	void *handle;
-	struct module_library *next;
+	struct mm_library *next;
 };
 
-struct module_node {
+struct mm_node {
 	bool active;
-	struct module_library *lib;
+	struct mm_library *lib;
 	char name[MODULE_NAME_LEN];
 	/* for getter and setter */
-	enum module_data_type data_type;
+	enum mm_data_type data_type;
 	/* universal pointer */
-	module_void func;
+	mm_void func;
 };
 
-static struct module_root root;
+static struct mm_root root;
+
+void *
+mm_model_allocator(void *data)
+{
+	return mmp_calloc(data, sizeof(struct mm_model_ext));
+}
+
+void
+mm_model_deallocator(void *ptr, void *data)
+{
+	mmp_free(ptr);
+}
 
 void
 mm_initialize(TL_V)
 {
-	/*struct module_library *ml = NULL;*/
+	/*struct mm_library *ml = NULL;*/
 	/* fix reinitialization */
 	mm_deinitialize(TL_A);
 	/* increment epoch */
@@ -72,7 +84,7 @@ mm_initialize(TL_V)
 		root.mmp = mmp_create();
 	}
 
-	/* TODO: load dlopen(...) to module_library */
+	/* TODO: load dlopen(...) to mm_library */
 
 }
 
@@ -80,7 +92,7 @@ void
 mm_deinitialize(TL_V)
 {
 	size_t epoch = 0u;
-	struct module_library *ml = NULL;
+	struct mm_library *ml = NULL;
 
 	/* save epoch */
 	epoch = root.epoch;
@@ -101,10 +113,10 @@ mm_deinitialize(TL_V)
 	root.epoch = epoch;
 }
 
-static struct module_node *
-module_add_list(TL_V, struct module_node **list, size_t *count)
+static struct mm_node *
+mm_add_list(TL_V, struct mm_node **list, size_t *count)
 {
-	struct module_node *mn = NULL;
+	struct mm_node *mn = NULL;
 	size_t _count = *count;
 	size_t i = 0u;
 	void *tmp;
@@ -115,10 +127,10 @@ module_add_list(TL_V, struct module_node **list, size_t *count)
 		}
 	}
 
-	tmp = mmp_realloc(root.mmp, *list, sizeof(struct module_node) * (_count + 1));
+	tmp = mmp_realloc(root.mmp, *list, sizeof(struct mm_node) * (_count + 1));
 	if (!tmp) {
 		tlog_warn("realloc(%d) failed: %s",
-				sizeof(struct module_node) * (_count + 1), strerror(errno));
+				sizeof(struct mm_node) * (_count + 1), strerror(errno));
 		return NULL;
 	}
 	list = tmp;
@@ -133,30 +145,30 @@ module_add_list(TL_V, struct module_node **list, size_t *count)
 }
 
 static void
-module_register_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN], module_void func)
+mm_register_func(TL_V, enum mm_type mt, const char name[MODULE_NAME_LEN], mm_void func)
 {
-	struct module_node *mn = NULL;
+	struct mm_node *mn = NULL;
 
 	if (!root.mmp) {
-		tlog_warn("module_model not initialized", NULL);
+		tlog_warn("mm_model not initialized", NULL);
 		return;
 	}
 
 	switch (mt) {
 		case MODULE_ADD:
-			mn = module_add_list(TL_A, &root.add, &root.add_count);
+			mn = mm_add_list(TL_A, &root.add, &root.add_count);
 			break;
 		case MODULE_DEL:
-			mn = module_add_list(TL_A, &root.del, &root.del_count);
+			mn = mm_add_list(TL_A, &root.del, &root.del_count);
 			break;
 		case MODULE_GET:
-			mn = module_add_list(TL_A, &root.get, &root.get_count);
+			mn = mm_add_list(TL_A, &root.get, &root.get_count);
 			break;
 		case MODULE_SET:
-			mn = module_add_list(TL_A, &root.set, &root.set_count);
+			mn = mm_add_list(TL_A, &root.set, &root.set_count);
 			break;
 		case MODULE_REFRESH:
-			mn = module_add_list(TL_A, &root.refresh, &root.refresh_count);
+			mn = mm_add_list(TL_A, &root.refresh, &root.refresh_count);
 			break;
 	};
 
@@ -171,7 +183,7 @@ module_register_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN]
 }
 
 static const char *
-mm_strtype(enum module_type mt)
+mm_strtype(enum mm_type mt)
 {
 
 	switch (mt) {
@@ -195,29 +207,29 @@ mm_strtype(enum module_type mt)
 }
 
 void
-mm_reg_refresh(const char name[MODULE_NAME_LEN], module_refresh func)
+mm_reg_refresh(const char name[MODULE_NAME_LEN], mm_refresh func)
 {
-	module_register_func(TL_A, MODULE_REFRESH, name, (module_void)func);
+	mm_register_func(TL_A, MODULE_REFRESH, name, (mm_void)func);
 }
 
 void
-mm_reg_add(const char name[MODULE_NAME_LEN], module_add func)
+mm_reg_add(const char name[MODULE_NAME_LEN], mm_add func)
 {
-	module_register_func(TL_A, MODULE_ADD, name, (module_void)func);
+	mm_register_func(TL_A, MODULE_ADD, name, (mm_void)func);
 }
 
 void
-mm_reg_del(const char name[MODULE_NAME_LEN], module_del func)
+mm_reg_del(const char name[MODULE_NAME_LEN], mm_del func)
 {
-	module_register_func(TL_A, MODULE_DEL, name, (module_void)func);
+	mm_register_func(TL_A, MODULE_DEL, name, (mm_void)func);
 }
 
 bool
-mm_link_func(TL_V, struct module_func_link *link, enum module_type mt, const char name[MODULE_NAME_LEN])
+mm_link_func(TL_V, struct mm_func_link *link, enum mm_type mt, const char name[MODULE_NAME_LEN])
 {
 	size_t i = 0u;
 	size_t count = 0u;
-	struct module_node *mn = NULL;
+	struct mm_node *mn = NULL;
 
 	/* initialization */
 	link->epoch = root.epoch;
@@ -265,8 +277,8 @@ mm_link_func(TL_V, struct module_func_link *link, enum module_type mt, const cha
 	return false;
 }
 
-module_void
-mm_get_func(TL_V, struct module_func_link *link, enum module_data_type *mdt)
+mm_void
+mm_get_func(TL_V, struct mm_func_link *link, enum mm_data_type *mdt)
 {
 	if (!link->epoch) {
 		/* not initialized */
