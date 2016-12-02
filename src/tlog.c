@@ -28,7 +28,7 @@ void
 _vtlog(enum tlog_level tl, const char *parent_func, const char *func, const char *format, va_list ap)
 {
 	time_t t = 0u;
-	char tm_str[24] = {};
+	char tm_str[24] = {0};
 	struct tm *tm = NULL;
 	char *lv = NULL;
 	if (!log)

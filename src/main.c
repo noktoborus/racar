@@ -18,8 +18,8 @@
 void
 begin(TL_V)
 {
-	struct rcr rcr = {};
-	struct mdl mdl = {};
+	struct rcr rcr = {0};
+	struct mdl mdl = {0};
 
 	mdl_init(TL_A, &mdl);
 

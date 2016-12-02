@@ -79,7 +79,7 @@ _mload_load_attribute(TL_V, struct mmp *mmp, struct mdl *mdl, struct mdl_node *m
 static bool
 _mload_load(TL_V, struct mmp *mmp, struct mdl *mdl, FILE *f, const char *filename)
 {
-	char line[4096] = {};
+	char line[4096] = {0};
 	struct mdl_node *mn = NULL;
 	char *begin = NULL;
 	char *end = NULL;

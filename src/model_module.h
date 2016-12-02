@@ -9,6 +9,8 @@
 
 #define MODULE_NAME_LEN 80
 
+typedef void (*module_void)(void);
+
 typedef void (*module_refresh)(struct mdl *m, struct mdl_node *node, const char *node_path);
 
 typedef void (*module_add)(struct mdl *m, struct mdl_node *node, const char *node_path);
@@ -41,7 +43,7 @@ enum module_data_type {
 struct module_func_link {
 	size_t epoch;
 
-	void *func;
+	module_void func;
 
 	enum module_type mt;
 	enum module_data_type mdt;
@@ -60,13 +62,13 @@ void mm_model_deallocator(void *ptr, void *data);
 /* set pointer to func */
 bool mm_link_func(TL_V, struct module_func_link *link, enum module_type mt, const char name[MODULE_NAME_LEN]);
 /* safety get func for call by link, return data type in mdt */
-void *mm_get_func(TL_V, struct module_func_link *link, enum module_data_type *mdt);
+module_void mm_get_func(TL_V, struct module_func_link *link, enum module_data_type *mdt);
 
 /* register */
-void mm_reg_refresh(const char name[MODULE_NAME_LEN], module_refresh *func);
+void mm_reg_refresh(const char name[MODULE_NAME_LEN], module_refresh func);
 
-void mm_reg_add(const char name[MODULE_NAME_LEN], module_add *func);
-void mm_reg_del(const char name[MODULE_NAME_LEN], module_del *func);
+void mm_reg_add(const char name[MODULE_NAME_LEN], module_add func);
+void mm_reg_del(const char name[MODULE_NAME_LEN], module_del func);
 
 void mm_reg_get();
 void mm_reg_set();

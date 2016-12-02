@@ -17,7 +17,7 @@ mdl_alloc(size_t size, struct mmp *mmp)
 static void
 mdl_free(void *ptr, struct mmp *mmp)
 {
-	return mmp_free(ptr);
+	mmp_free(ptr);
 }
 
 void
@@ -42,15 +42,16 @@ mdl_deinit(TL_V, struct mdl *m)
 void
 mdl_set_allocator(TL_V, struct mdl *m, mdl_allocator al, mdl_deallocator dal, void *allocator_data)
 {
-	tlog_trace("(m=%p, al=%p, dal=%p)", (void*)m, (void*)al, (void*)dal);
+	tlog_trace("(m=%p, al=%p, dal=%p)", (void*)m, (void(*)(void))al, (void(*)(void*))dal);
 	if (!al || !dal) {
-		tlog_notice("allocator not setted: allocator=%p, deallocator=%p", (void*)al, (void*)dal);
+		tlog_notice("allocator not setted: allocator=%p, deallocator=%p",
+				(void(*)(void*))al, (void(*)(void*))dal);
 		return;
 	}
 
 	tlog_debug("set new allocator: allocator=%p, deallocator=%p, old: %p, %p",
-			(void*)al, (void*)dal,
-			(void*)m->allocator, (void*)m->deallocator);
+			(void(*)(void))al, (void(*)(void))dal,
+			(void(*)(void))m->allocator, (void(*)(void))m->deallocator);
 	m->allocator = al;
 	m->deallocator = dal;
 	m->allocator_data = allocator_data;
@@ -145,7 +146,7 @@ struct mdl_node *
 mdl_add_path(TL_V, struct mdl *m, struct mdl_node *root, const char *path)
 {
 	const char *end = NULL;
-	char name[MDL_NAME_LEN] = {};
+	char name[MDL_NAME_LEN] = {0};
 	struct mdl_node *mn = NULL;
 
 	tlog_trace("(m=%p, root=%p, path=\"%s\")", (void*)m, (void*)root, path);
@@ -200,7 +201,7 @@ struct mdl_node *
 mdl_get_node(TL_V, struct mdl *m, struct mdl_node *root, const char *path)
 {
 	const char *end = NULL;
-	char name[MDL_NAME_LEN] = {};
+	char name[MDL_NAME_LEN] = {0};
 	struct mdl_node *mn = NULL;
 
 	tlog_trace("(m=%p, root=%p, path=\"%s\")", (void*)m, (void*)root, path);

@@ -49,7 +49,7 @@ struct module_node {
 	/* for getter and setter */
 	enum module_data_type data_type;
 	/* universal pointer */
-	void (*func)(void*);
+	module_void func;
 };
 
 static struct module_root root;
@@ -133,7 +133,7 @@ module_add_list(TL_V, struct module_node **list, size_t *count)
 }
 
 static void
-module_register_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN], void (*func)(void*))
+module_register_func(TL_V, enum module_type mt, const char name[MODULE_NAME_LEN], module_void func)
 {
 	struct module_node *mn = NULL;
 
@@ -195,21 +195,21 @@ mm_strtype(enum module_type mt)
 }
 
 void
-mm_reg_refresh(const char name[MODULE_NAME_LEN], module_refresh *func)
+mm_reg_refresh(const char name[MODULE_NAME_LEN], module_refresh func)
 {
-	module_register_func(TL_A, MODULE_REFRESH, name, (void(*)(void*))func);
+	module_register_func(TL_A, MODULE_REFRESH, name, (module_void)func);
 }
 
 void
-mm_reg_add(const char name[MODULE_NAME_LEN], module_add *func)
+mm_reg_add(const char name[MODULE_NAME_LEN], module_add func)
 {
-	module_register_func(TL_A, MODULE_ADD, name, (void(*)(void*))func);
+	module_register_func(TL_A, MODULE_ADD, name, (module_void)func);
 }
 
 void
-mm_reg_del(const char name[MODULE_NAME_LEN], module_del *func)
+mm_reg_del(const char name[MODULE_NAME_LEN], module_del func)
 {
-	module_register_func(TL_A, MODULE_DEL, name, (void(*)(void*))func);
+	module_register_func(TL_A, MODULE_DEL, name, (module_void)func);
 }
 
 bool
@@ -265,7 +265,7 @@ mm_link_func(TL_V, struct module_func_link *link, enum module_type mt, const cha
 	return false;
 }
 
-void *
+module_void
 mm_get_func(TL_V, struct module_func_link *link, enum module_data_type *mdt)
 {
 	if (!link->epoch) {
