@@ -22,10 +22,12 @@ begin(TL_V)
 	struct rcr rcr = {0};
 	struct mdl mdl = {0};
 
+	/* init */
 	mdl_init(TL_A, &mdl);
 	mm_initialize(TL_A);
 	mdl_set_allocator(TL_A, &mdl, mm_model_allocator, mm_model_deallocator, mdl.mmp);
 
+	/* work */
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.1.Path.3");
 	mdl_add_path(TL_A, &mdl, NULL, "Gate");
 	mdl_add_path(TL_A, &mdl, NULL, "Gate.Start");
@@ -38,6 +40,7 @@ begin(TL_V)
 
 	mdl_log_tree(TL_A, &mdl, NULL);
 
+	/* deinit */
 	mdl_deinit(TL_A, &mdl);
 	mm_deinitialize(TL_A);
 	rcr_free_all(TL_A, &rcr);
