@@ -44,6 +44,7 @@ begin(TL_V)
 	mload_load(TL_A, &mdl, "etc/model.txt");
 
 	mdl_copy_node(TL_A, &mdl, mn_dst, "X", mn_src);
+	mdl_copy_path(TL_A, &mdl, mn_dst, "E", "Templates.Rule");
 
 	mdl_log_tree(TL_A, &mdl, NULL);
 

@@ -254,26 +254,19 @@ mdl_get_node(TL_V, struct mdl *m, struct mdl_node *root, const char *path)
 	tlog_trace("(m=%p, root=%p, path=%p [%s])",
 			(void*)m, (void*)root, (void*)path, path ? path : "");
 
-	if (root) {
-		/* search in root children's */
-		mn = root;
-		mn = mn->child;
-	} else {
-		/* or search in main root */
-		mn = m->child;
-	}
-
 	while (mdl_iterate_path(TL_A, path, &end, name) != 0u) {
+		tlog_debug("iterate: %s", name);
 		/* deep, in childrens */
 		if (!mn) {
 			if (root) {
 				/* go to next of root */
 				mn = root;
-				mn = mn->child;
 			} else if (m->child) {
 				/* start of root */
 				mn = m->child;
 			}
+		} else {
+			mn = mn->child;
 		}
 		/* search in sibling */
 		for (; mn; mn = mn->next) {
@@ -422,13 +415,23 @@ mdl_copy_node(TL_V, struct mdl *m, struct mdl_node *parent, const char *new_name
 		}
 	}
 
-	return NULL;
+	return mn_parent;
 }
 
 struct mdl_node *
 mdl_copy_path(TL_V, struct mdl *m, struct mdl_node *parent, const char *new_name, const char *source)
 {
-	struct mdl_node *mn = NULL;
-	return NULL;
+	struct mdl_node *mn_src = NULL;
+
+	tlog_trace("(m=%p, parent=%p, new_name=%p [%s], source=%p [%s])",
+			(void*)m, (void*)parent, parent ? parent->name : "",
+			(void*)new_name, new_name ? new_name : "",
+			(void*)source, source ? source : "");
+
+	if ((mn_src = mdl_get_node(TL_A, m, NULL, source)) == NULL) {
+		tlog_warn("node not found in path '%s'", source);
+		return NULL;
+	}
+	return mdl_copy_node(TL_A, m, parent, new_name, mn_src);
 }
 
