@@ -9,7 +9,16 @@ endif ()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_executable(racar src/main.c src/tlog.c src/base.c src/mempool.c src/model.c src/model_module.c src/model_loader.c)
+add_executable(racar
+    src/main.c
+    src/tlog.c
+    src/base.c
+    src/mempool.c
+    src/model.c
+    src/model_module.c
+    src/model_loader.c
+    src/model_session.c)
+
 target_link_libraries(racar dl)
 
 
