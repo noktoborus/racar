@@ -1,16 +1,28 @@
-Templates.Rule.Name
-Templates.Rule.Value
-Templates.Rule.Extra
-Templates.Rule.Extra.Home
-Templates.Rule.Extra.Position
-Templates.Rule.Extra.Nominal
+Templates.Gate.Name
+Templates.Gate.Parent
 
-Rule.
-	template
-Team.1.Name get=1
-	refresh=2
-Team.2.Name
-	invalid
-		multiline attribute
-Team.3.Name
-Team.4.Name
+Tempaltes.AttemptGate del=attempt_gate_del
+Templates.AttemptGate.PassTime
+Templates.AttemptGate.Penalty
+
+Templates.Attempt del=attempt_del
+Templates.Attempt.TimeStart
+Templates.Attempt.TimeFinish
+Templates.Attempt.GateCount
+Templates.Attempt.Gate add=attempt_gate_add
+
+Templates.TeamMember del=team_member_del
+Templates.TeamMember.Name
+Templates.TeamMember.IsCaptain
+
+Templates.Team del=team_del
+Templates.Team.Name
+Templates.Team.AttemptCount
+Templates.Team.Attempt add=team_attempt_add
+Templates.Team.MemberCount
+Templates.Team.Member add=team_member_add
+
+Team add=team_add
+Gate add=gate_add
+Gate.Start
+Gate.Finish
