@@ -89,7 +89,7 @@ mm_initialize(TL_V)
 		root.epoch++;
 	}
 
-	tlog_info("model module initialization, epoch: %"PRIuPTR, root.epoch);
+	tlog_info("model module initialization, epoch: %zu", root.epoch);
 
 	if (!root.mmp) {
 		root.mmp = mmp_create();
@@ -282,7 +282,7 @@ mm_link_func(TL_V, struct mm_func_link *link, enum mm_type mt, const char name[M
 		}
 	}
 
-	tlog_warn("module '%s:%s' not found in %"PRIuPTR" epoch",
+	tlog_warn("module '%s:%s' not found in %zu epoch",
 		   	mm_strtype(mt), name, root.epoch);
 
 	return false;
@@ -299,7 +299,7 @@ mm_get_func(TL_V, struct mm_func_link *link, enum mm_data_type *mdt)
 
 	if (link->epoch != root.epoch) {
 		if (!mm_link_func(TL_A, link, link->mt, link->name)) {
-			tlog_warn("link to '%s:%s' not valid in %"PRIuPTR" epoch",
+			tlog_warn("link to '%s:%s' not valid in %zu epoch",
 				   	mm_strtype(link->mt), link->name, root.epoch);
 			return NULL;
 		}

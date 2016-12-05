@@ -17,7 +17,7 @@ static void
 _mload_parse_attribute(TL_V, struct mmp *mmp, struct mdl *mdl, struct mm_model_ext *m, const char *attrib, const char *filename, size_t lineno)
 {
 	const char *v = NULL;
-	tlog_trace("(mmp=%p, mdl=%p, m=%p [%s], attrib=%p [%s], filename=%p [%s], lineno=%"PRIuPTR")",
+	tlog_trace("(mmp=%p, mdl=%p, m=%p [%s], attrib=%p [%s], filename=%p [%s], lineno=%zu)",
 			(void*)mmp, (void*)mdl, (void*)m, m ? m->model.name : "",
 			(void*)attrib, (attrib ? attrib : ""),
 			(void*)filename, filename ? filename : "", lineno);
@@ -38,7 +38,7 @@ _mload_parse_attribute(TL_V, struct mmp *mmp, struct mdl *mdl, struct mm_model_e
 		v = attrib + 4;
 		mm_link_func(TL_A, &m->add, MODULE_ADD, v);
 	} else {
-		tlog_warn("unknown attribute on %s:%"PRIuPTR": '%s'", filename, lineno, attrib);
+		tlog_warn("unknown attribute on %s:%zu: '%s'", filename, lineno, attrib);
 		return;
 	}
 }
@@ -48,7 +48,7 @@ _mload_load_attribute(TL_V, struct mmp *mmp, struct mdl *mdl, struct mm_model_ex
 {
 	char *end = NULL;
 
-	tlog_trace("(mmp=%p, mdl=%p, m=%p [%s], begin=%p [%s], filename=%p [%s], lineno=%"PRIuPTR")",
+	tlog_trace("(mmp=%p, mdl=%p, m=%p [%s], begin=%p [%s], filename=%p [%s], lineno=%zu)",
 			(void*)mmp, (void*)mdl, (void*)m, m ? m->model.name : "",
 			(void*)begin, (begin ? begin : ""),
 			(void*)filename, filename ? filename : "", lineno);
@@ -112,7 +112,7 @@ _mload_load(TL_V, struct mmp *mmp, struct mdl *mdl, FILE *f, const char *filenam
 			}
 			begin = end;
 		} else if (!mn) {
-			tlog_notice("invalid line %s:%"PRIuPTR": node path not defined", filename, lineno);
+			tlog_notice("invalid line %s:%zu: node path not defined", filename, lineno);
 			continue;
 		}
 		/* process arguments */
