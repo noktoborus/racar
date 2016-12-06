@@ -39,12 +39,15 @@ struct mm_root {
 struct mm_library {
 	char path[PATH_MAX];
 	void *handle;
+
 	struct mm_library *next;
+
+	void (*init)();
+	void (*destroy)();
 };
 
 struct mm_node {
 	bool active;
-	struct mm_library *lib;
 	char name[MODULE_NAME_LEN];
 	/* for getter and setter */
 	enum mm_data_type data_type;
@@ -132,9 +135,11 @@ mm_model_printer(struct mm_model_ext *me, const char *path, size_t level, size_t
 }
 
 void
-mm_initialize(TL_V)
+mm_initialize(TL_V, const char *path)
 {
-	/*struct mm_library *ml = NULL;*/
+	void *handle = NULL;
+	mm_init init = NULL;
+	struct mm_library *ml = NULL;
 	/* fix reinitialization */
 	mm_deinitialize(TL_A);
 	/* increment epoch */
@@ -149,8 +154,25 @@ mm_initialize(TL_V)
 		root.mmp = mmp_create();
 	}
 
-	/* TODO: load dlopen(...) to mm_library */
+	tlog_info("trying load modules from '%s'", path);
+	if (!(handle = dlopen(path, RTLD_LAZY))) {
+		tlog_notice("dlopen(%s) failed: %s", path, dlerror());
+	}
 
+	ml = mmp_calloc(root.mmp, sizeof(*ml));
+	if (!ml) {
+		tlog("calloc(%d) failed: %s", sizeof(*ml), strerror(errno));
+		dlclose(handle);
+		return;
+	}
+
+	init = (mm_init)((uintptr_t)dlsym(handle, "module_init"));
+	if (init) {
+		ml->destroy = (*init)();
+	}
+	snprintf(ml->path, sizeof(ml->path), "%s", path);
+	ml->next = root.libs;
+	root.libs = ml;
 }
 
 void
@@ -159,11 +181,17 @@ mm_deinitialize(TL_V)
 	size_t epoch = 0u;
 	struct mm_library *ml = NULL;
 
+	tlog_trace("()", NULL);
+
 	/* save epoch */
 	epoch = root.epoch;
 
 	if (root.libs) {
 		for (ml = root.libs; ml; ml = ml->next) {
+			tlog_info("unload library '%s'", ml->path);
+			if (ml->destroy) {
+				ml->destroy();
+			}
 			if (ml->handle) {
 				dlclose(ml->handle);
 				ml->handle = NULL;

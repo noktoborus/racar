@@ -19,12 +19,11 @@
 void
 begin(TL_V)
 {
-	struct rcr rcr = {0};
 	struct mdl mdl = {0};
 
 	/* init */
 	mdl_init(TL_A, &mdl);
-	mm_initialize(TL_A);
+	mm_initialize(TL_A, "libmodule-racar.so");
 	mm_attach(TL_A, &mdl);
 
 	/* work */
@@ -35,7 +34,6 @@ begin(TL_V)
 	/* deinit */
 	mdl_deinit(TL_A, &mdl);
 	mm_deinitialize(TL_A);
-	rcr_free_all(TL_A, &rcr);
 }
 
 int

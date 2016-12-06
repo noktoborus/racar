@@ -25,6 +25,10 @@ typedef enum msess_rc (*mm_set_int)(struct msess *ms, struct mdl *m, struct mdl_
 typedef enum msess_rc (*mm_set_uint)(struct msess *ms, struct mdl *m, struct mdl_node *node, unsigned long value);
 typedef enum msess_rc (*mm_set_str)(struct msess *ms, struct mdl *m, struct mdl_node *node, const char *value);
 
+/* init and destroy modules handle */
+typedef void (*mm_destroy)();
+typedef mm_destroy (*mm_init)();
+
 enum mm_type {
 	MODULE_REFRESH = 1,
 
@@ -64,7 +68,7 @@ struct mm_model_ext {
 #define MODULE_NONE 0
 
 /* init */
-void mm_initialize(TL_V);
+void mm_initialize(TL_V, const char *path);
 void mm_deinitialize(TL_V);
 /* attach to model tree */
 bool mm_attach(TL_V, struct mdl *m);
@@ -89,7 +93,8 @@ void mm_reg_get();
 void mm_reg_set();
 
 /* modules' utils */
-void mm_log(enum tlog_level level, const char *format, ...);
+#define mm_log(level, ...) (_mm_log(level, __VA_ARGS__))
+void _mm_log(enum tlog_level level, const char *format, ...);
 
 #endif /* _SRC_MODEL_MODULE_1479896182_H_ */
 
