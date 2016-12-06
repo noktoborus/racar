@@ -10,7 +10,7 @@
 
 #define MSESS_USERNAME_LEN 128
 
-enum msess_result {
+enum msess_rc {
 	MSESS_OK = 0,
 };
 
@@ -20,7 +20,7 @@ struct msess {
 	/* session allocator */
 	struct mmp *mmp;
 	/* result code */
-	enum msess_result rc;
+	enum msess_rc rc;
 };
 
 /* create or init *mss,
@@ -32,7 +32,8 @@ struct msess *msess_init(TL_V, struct msess *mss, char username[MSESS_USERNAME_L
 void msess_destroy(TL_V, struct msess *mss);
 
 /* set result code */
-void msess_result(struct msess *mss, enum msess_result rc);
+#define msess_result(mss, rc) _msess_result(TL_A, mss, rc)
+void _msess_result(struct msess *mss, enum msess_rc rc);
 
 #endif /* _SRC_MODEL_SESSION_1480940723_H_ */
 

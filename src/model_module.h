@@ -6,23 +6,24 @@
 
 #include "tlog.h"
 #include "model.h"
+#include "model_session.h"
 
 #define MODULE_NAME_LEN 80
 
 typedef void (*mm_void)(void);
 
-typedef void (*mm_refresh)(struct mdl *m, struct mdl_node *node, const char *node_path);
+typedef enum msess_rc (*mm_refresh)(struct msess *ms, struct mdl *m, struct mdl_node *node, const char *node_path);
 
-typedef void (*mm_add)(struct mdl *m, struct mdl_node *node, const char *node_path);
-typedef void (*mm_del)(struct mdl *m, struct mdl_node *node, const char *node_path);
+typedef enum msess_rc (*mm_add)(struct msess *ms, struct mdl *m, struct mdl_node *node, const char *node_path);
+typedef enum msess_rc (*mm_del)(struct msess *ms, struct mdl *m, struct mdl_node *node, const char *node_path);
 
-typedef bool (*mm_get_int)(struct mdl *m, struct mdl_node *node, const char *node_path, struct mmp *mmp, long *value);
-typedef bool (*mm_get_uint)(struct mdl *m, struct mdl_node *node, const char *node_path, struct mmp *mmp, unsigned long *value);
-typedef bool (*mm_get_str)(struct mdl *m, struct mdl_node *node, const char *node_path, struct mmp *mmp, const char **value);
+typedef enum msess_rc (*mm_get_int)(struct msess *ms, struct mdl *m, struct mdl_node *node, const char *node_path, long *value);
+typedef enum msess_rc (*mm_get_uint)(struct msess *ms, struct mdl *m, struct mdl_node *node, const char *node_path, unsigned long *value);
+typedef enum msess_rc (*mm_get_str)(struct msess *ms, struct mdl *m, struct mdl_node *node, const char *node_path, const char **value);
 
-typedef bool (*mm_set_int)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, long value);
-typedef bool (*mm_set_uint)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, unsigned long value);
-typedef bool (*mm_set_str)(struct mdl *m, struct mdl_node *node, struct mmp *mmp, const char *value);
+typedef enum msess_rc (*mm_set_int)(struct msess *ms, struct mdl *m, struct mdl_node *node, long value);
+typedef enum msess_rc (*mm_set_uint)(struct msess *ms, struct mdl *m, struct mdl_node *node, unsigned long value);
+typedef enum msess_rc (*mm_set_str)(struct msess *ms, struct mdl *m, struct mdl_node *node, const char *value);
 
 enum mm_type {
 	MODULE_REFRESH = 1,
