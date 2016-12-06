@@ -25,7 +25,7 @@ begin(TL_V)
 	/* init */
 	mdl_init(TL_A, &mdl);
 	mm_initialize(TL_A);
-	mdl_set_allocator(TL_A, &mdl, mm_model_allocator, mm_model_deallocator, mm_model_copier, mdl.mmp);
+	mm_attach(TL_A, &mdl);
 
 	/* work */
 	mload_load(TL_A, &mdl, "etc/model.txt");

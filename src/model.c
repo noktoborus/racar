@@ -8,6 +8,18 @@
 
 #include "model.h"
 
+static void
+mdl_print(struct mdl_node *mn, const char *path, size_t level, size_t child_no)
+{
+	TL_X;
+
+	if (!mn) {
+		tlog_info("Model tree:", NULL);
+		return;
+	}
+	tlog_info("%*s %u. %s [%s]", 3 * (level - 1), "", child_no, mn->name, path);
+}
+
 static void *
 mdl_alloc(struct mmp *mmp)
 {
@@ -39,6 +51,8 @@ mdl_init(TL_V, struct mdl *m)
 	m->deallocator = (mdl_deallocator)mdl_free;
 	m->copier = (mdl_copier)mdl_copy;
 	m->allocator_data = m->mmp;
+
+	m->printer = mdl_print;
 }
 
 void
@@ -361,13 +375,13 @@ mdl_log_dive_deep(TL_V, struct mdl *m, struct mdl_node *node, unsigned level, un
 {
 	const char *path = NULL;
 	if (!level) {
-		tlog_info("Model tree:", NULL);
+		m->printer(NULL, NULL, 0, 0);
 		mdl_log_dive_deep(TL_A, m, node, level + 1, 1u);
 		return;
 	}
 
 	path = mdl_get_path(TL_A, m, NULL, node, NULL);
-	tlog_info("%*s %u. %s [%s]", 3 * (level - 1), "", child, node->name, path);
+	m->printer(node, path, level, child);
 	mmp_free((void*)path);
 
 	if (node->child) {
@@ -387,6 +401,9 @@ mdl_log_tree(TL_V, struct mdl *m, struct mdl_node *root)
 	if (!root) {
 		root = m->child;
 	}
+
+	if (!m->printer)
+		return;
 
 	mdl_log_dive_deep(TL_A, m, root, 0u, 0u);
 }

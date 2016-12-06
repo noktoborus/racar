@@ -66,6 +66,8 @@ struct mm_model_ext {
 /* init */
 void mm_initialize(TL_V);
 void mm_deinitialize(TL_V);
+/* attach to model tree */
+bool mm_attach(TL_V, struct mdl *m);
 
 /* model allocator */
 void *mm_model_allocator(void *data);

@@ -67,7 +67,11 @@ _vtlog(enum tlog_level tl, const char *parent_func, const char *func, const char
 	tm = gmtime(&t);
 	strftime(tm_str, sizeof(tm_str), "%b %e %T", tm);
 	/* begin */
-	fprintf(log, "[%s] %s[%s {%s}] ", tm_str, lv ? lv : "", parent_func, func);
+	if (parent_func) {
+		fprintf(log, "[%s] %s[%s {%s}] ",tm_str, lv ? lv : "", parent_func, func);
+	} else {
+		fprintf(log, "[%s] %s[%s] ",tm_str, lv ? lv : "", func);
+	}
 	/* data */
 	vfprintf(log, format, ap);
 	/* end */

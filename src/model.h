@@ -25,11 +25,16 @@ typedef void*(*mdl_allocator)(void *data);
 typedef void(*mdl_deallocator)(void *ptr, void *data);
 typedef void*(*mdl_copier)(void *ptr, void *data);
 
+typedef void(*mdl_printer)(struct mdl_node *mn, const char *path, size_t level, size_t child_no);
+
 struct mdl {
+	/* node allocators */
 	mdl_allocator allocator;
 	mdl_deallocator deallocator;
 	mdl_copier copier;
 	void *allocator_data;
+	/* print node */
+	mdl_printer printer;
 
 	struct mdl_node *child;
 	struct mmp *mmp;

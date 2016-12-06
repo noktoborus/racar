@@ -6,6 +6,9 @@
 
 #include <stdarg.h>
 
+/* initializators */
+#define TL_X const char *tlog_parent_func = NULL
+/* arguments */
 #define TL_V const char *tlog_parent_func
 #define TL_A __func__
 
