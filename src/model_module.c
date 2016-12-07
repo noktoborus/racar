@@ -85,7 +85,7 @@ mm_model_printer(struct mm_model_ext *me, const char *path, size_t level, size_t
 {
 	TL_X;
 	char buf[1152] = {0};
-	char line[192] = {0};
+	size_t len = 0u;
 
 	if (!me) {
 		tlog_info("Model tree (epoch: %zu, registered funcs: %zu): ",
@@ -98,34 +98,34 @@ mm_model_printer(struct mm_model_ext *me, const char *path, size_t level, size_t
 		return;
 	}
 
-	if (me->refresh.mdt != MODULE_NONE) {
-		snprintf(line, sizeof(line), "refresh=%s:%zu",
+	if (me->refresh.mt != MODULE_NONE) {
+		len += snprintf(buf + len, sizeof(buf) - len,
+				"refresh=%s:%zu",
 				me->refresh.name, me->refresh.epoch);
-		strcat(buf, line);
 	}
 
-	if (me->get.mdt != MODULE_NONE) {
-		snprintf(line, sizeof(line), "%sget=%s:%zu", *buf ? " ,": "",
+	if (me->get.mt != MODULE_NONE) {
+		len += snprintf(buf + len, sizeof(buf) - len,
+				"%sget=%s:%zu", *buf ? " ,": "",
 				me->get.name, me->get.epoch);
-		strcat(buf, line);
 	}
 
-	if (me->set.mdt != MODULE_NONE) {
-		snprintf(line, sizeof(line), "%sset=%s:%zu",*buf ? " ,": "",
+	if (me->set.mt != MODULE_NONE) {
+		len += snprintf(buf + len, sizeof(buf) - len,
+				"%sset=%s:%zu",*buf ? " ,": "",
 				me->set.name, me->set.epoch);
-		strcat(buf, line);
 	}
 
-	if (me->add.mdt != MODULE_NONE) {
-		snprintf(line, sizeof(line), "%sadd=%s:%zu", *buf ? " ,": "",
+	if (me->add.mt != MODULE_NONE) {
+		len += snprintf(buf + len, sizeof(buf) - len,
+				"%sadd=%s:%zu", *buf ? " ,": "",
 				me->add.name, me->add.epoch);
-		strcat(buf, line);
 	}
 
-	if (me->del.mdt != MODULE_NONE) {
-		snprintf(line, sizeof(line), "%sdel=%s:%zu", *buf ? " ,": "",
+	if (me->del.mt != MODULE_NONE) {
+		len += snprintf(buf + len, sizeof(buf) - len,
+				"%sdel=%s:%zu", *buf ? " ,": "",
 				me->del.name, me->del.epoch);
-		strcat(buf, line);
 	}
 
 	tlog_info("%*s %u. %s [%s]", 3 * (level - 1), "",
@@ -349,6 +349,9 @@ mm_link_func(TL_V, struct mm_func_link *link, enum mm_type mt, const char name[M
 	size_t i = 0u;
 	size_t count = 0u;
 	struct mm_node *mn = NULL;
+
+	tlog_trace("(link=%p, mt=%d, name=%p [%s])",
+			(void*)link, mt, name, (name ? name : ""));
 
 	/* initialization */
 	link->epoch = root.epoch;
