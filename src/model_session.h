@@ -12,6 +12,8 @@
 
 enum msess_rc {
 	MSESS_OK = 0,
+	/* internal error */
+	MSESS_INT = 1,
 };
 
 struct msess {
