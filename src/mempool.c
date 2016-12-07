@@ -183,10 +183,12 @@ mmp_realloc(struct mmp *m, void *data, size_t size)
 	}
 
 	if (!(mn = _get_header(data))) {
+		fprintf(stderr, "get_header failed\n");
 		return NULL;
 	}
 
-	if (mn != MMP_NORMAL) {
+	if (mn->type != MMP_NORMAL) {
+		fprintf(stderr, "not a normal\n");
 		return NULL;
 	}
 
@@ -202,9 +204,11 @@ mmp_realloc(struct mmp *m, void *data, size_t size)
 	}
 
 	/* realloc */
-	tmp = realloc(mn, sizeof(mn) + size);
+	tmp = realloc(mn, sizeof(*mn) + size);
 	if (!tmp) {
 		return NULL;
+	} else {
+		mn = tmp;
 	}
 
 	mn->v.gen.data = (void*)(mn + 1);
