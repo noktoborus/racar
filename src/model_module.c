@@ -230,25 +230,32 @@ mm_add_list(TL_V, struct mm_node **list, size_t *count)
 	size_t i = 0u;
 	void *tmp;
 
+	tlog_trace("(list=%p [%p], count=%p [%zu])",
+			(void*)list,
+			(void*)(list ? *list : NULL),
+			(void*)count,
+			count ? *count : 0u);
+
+	/* find empty nodes */
 	for (i = 0u; i < _count; i++) {
 		if (!(*list)[i].active) {
 			return (*list) + i;
 		}
 	}
 
+	/* allocate new */
 	tmp = mmp_realloc(root.mmp, *list, sizeof(struct mm_node) * (_count + 1));
 	if (!tmp) {
 		tlog_warn("realloc(%d) failed: %s",
 				sizeof(struct mm_node) * (_count + 1), strerror(errno));
 		return NULL;
 	}
-	list = tmp;
+	*list = tmp;
 
 	mn = (*list) + _count;
+	*count = (_count + 1);
 
-	_count++;
-
-	*count = _count;
+	memset(mn, 0u, sizeof(*mn));
 
 	return mn;
 }
@@ -257,6 +264,9 @@ static void
 mm_register_func(TL_V, enum mm_type mt, const char name[MODULE_NAME_LEN], mm_void func)
 {
 	struct mm_node *mn = NULL;
+
+	tlog_trace("(mt=%d, name=%p [%s], func=%p)",
+			mt, (void*)name, name ? name : "", (void*)((uintptr_t)func));
 
 	if (!root.mmp) {
 		tlog_warn("mm_model not initialized", NULL);
