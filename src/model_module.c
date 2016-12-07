@@ -171,6 +171,7 @@ mm_initialize(TL_V, const char *path)
 		ml->destroy = (*init)();
 	}
 	snprintf(ml->path, sizeof(ml->path), "%s", path);
+	ml->handle = handle;
 	ml->next = root.libs;
 	root.libs = ml;
 }
