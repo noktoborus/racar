@@ -170,6 +170,28 @@ _get_header(void *data)
 }
 
 void *
+mmp_modify(struct mmp *m, void *data, void(*pfree)(void*))
+{
+	struct mmp_node *mn = NULL;
+
+	if (!(mn = _get_header(data))) {
+		fprintf(stderr, "get_header failed\n");
+		return NULL;
+	}
+
+	if (mn->type != MMP_NORMAL) {
+		fprintf(stderr, "not a MMP_NORMAL\n");
+		return NULL;
+	}
+
+	/* change type and set pfree */
+	mn->type = MMP_GENERIC;
+	mn->v.gen.free = pfree;
+
+	return data;
+}
+
+void *
 mmp_realloc(struct mmp *m, void *data, size_t size)
 {
 	register struct mmp_node *mn_prev = NULL;
@@ -188,7 +210,7 @@ mmp_realloc(struct mmp *m, void *data, size_t size)
 	}
 
 	if (mn->type != MMP_NORMAL) {
-		fprintf(stderr, "not a normal\n");
+		fprintf(stderr, "not a MMP_NORMAL\n");
 		return NULL;
 	}
 

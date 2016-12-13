@@ -60,6 +60,11 @@ void mmp_destroy(struct mmp *m);
 void *mmp_malloc(struct mmp *m, size_t size);
 /* allocate and fill zeros */
 void *mmp_calloc(struct mmp *m, size_t size);
+/* add pointer to clean func on already mmp_malloc'ed block
+ * return pointer to *data or NULL when fail
+ * work only with MMP_NORMAL node (mmp_calloc(), mmp_malloc())
+ */
+void *mmp_modify(struct mmp *m, void *data, void(*pfree)(void*));
 /* assign generic data
  * return data or NULL when fail
  * pfree(data) when fail
