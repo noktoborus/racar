@@ -32,7 +32,7 @@ void _vtlog(enum tlog_level tl, const char *parent_func, const char *func, const
 #define tlog(format, ...) _tlog(TLOG_NONE, tlog_parent_func, __func__, format, __VA_ARGS__)
 #define tlog_alert(format, ...) _tlog(TLOG_ALERT, tlog_parent_func, __func__, format, __VA_ARGS__)
 #define tlog_critical(format, ...) _tlog(TLOG_CRIT, tlog_parent_func, __func__, format, __VA_ARGS__)
-#define tlog_error(format, ...) _tlog(TLOG_ERROR, tlog_parent_func, __func__, format, __VA_ARGS__)
+#define tlog_error(format, ...) _tlog(TLOG_ERR, tlog_parent_func, __func__, format, __VA_ARGS__)
 #define tlog_warn(format, ...) _tlog(TLOG_WARN, tlog_parent_func, __func__, format, __VA_ARGS__)
 #define tlog_notice(format, ...) _tlog(TLOG_NOTICE, tlog_parent_func, __func__, format, __VA_ARGS__)
 #define tlog_info(format, ...) _tlog(TLOG_INFO, tlog_parent_func, __func__, format, __VA_ARGS__)
