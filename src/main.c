@@ -16,15 +16,20 @@
 #include "model_loader.h"
 #include "model_module.h"
 
+#include "evsock.h"
+
 void
 begin(TL_V)
 {
 	struct mdl mdl = {0};
+	struct evs evs = {0};
 
 	/* init */
 	mdl_init(TL_A, &mdl);
 	mm_initialize(TL_A, "libmodule-racar.so");
 	mm_attach(TL_A, &mdl);
+
+	evs_setup(TL_A, &evs, NULL);
 
 	/* work */
 	mload_load(TL_A, &mdl, "etc/model.txt");
@@ -34,6 +39,7 @@ begin(TL_V)
 	/* deinit */
 	mdl_deinit(TL_A, &mdl);
 	mm_deinitialize(TL_A);
+	evs_destroy(TL_A, &evs);
 }
 
 int

@@ -2,6 +2,7 @@
  * file: src/model_session.c
  */
 #include <string.h>
+#include <errno.h>
 
 #include "model_session.h"
 
@@ -14,6 +15,7 @@ msess_init(TL_V, struct msess *mss, char username[MSESS_USERNAME_LEN])
 			(void*)mss, (void*)username, username ? username : "");
 
 	if (!(mmp = mmp_create())) {
+		tlog_error("mmp allocation failed: %s", strerror(errno));
 		return NULL;
 	}
 
@@ -22,6 +24,8 @@ msess_init(TL_V, struct msess *mss, char username[MSESS_USERNAME_LEN])
 	} else {
 		/* allocate new */
 		if (!(mss = mmp_calloc(mmp, sizeof(*mss)))) {
+			tlog_error("calloc(%d) failed: %s",
+					sizeof(*mss), strerror(errno));
 			mmp_destroy(mmp);
 			return NULL;
 		}

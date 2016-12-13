@@ -22,6 +22,7 @@ add_library(model SHARED
     src/model_module.c
     src/model_loader.c
     src/model_session.c
+    src/evsock.c
     )
 
 # *** executable
@@ -31,7 +32,7 @@ add_executable(racar
     src/main.c
     )
 
-target_link_libraries(racar model dl)
+target_link_libraries(racar model dl ev)
 
 # *** modules
 option(OPT_MODULE_RACAR "Build racar module" ON)
