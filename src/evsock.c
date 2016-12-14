@@ -60,3 +60,44 @@ evs_destroy(TL_V, struct evs *evm)
 	mmp_destroy(mmp);
 }
 
+struct evs_desc *
+evs_bind(TL_V, struct evs *evm, const char *address, evs_accept_cb_t event_cb)
+{
+	tlog_trace("(evm=%p, address=%p [%s], event_cb=%p)",
+			(void*)evm, (void*)address, (address ? address : ""), (void*)((uintptr_t)event_cb));
+
+	return NULL;
+}
+
+struct evs_desc *
+evs_connect(TL_V, struct evs *evm, const char *address, evs_connect_cb_t event_cb)
+{
+	tlog_trace("(evm=%p, address=%p [%s], event_cb=%p)",
+			(void*)evm, (void*)address, (address ? address : ""), (void*)((uintptr_t)event_cb));
+
+	return NULL;
+}
+
+bool
+evs_set_event(TL_V, struct evs_desc *d, evs_event_cb_t event_cb)
+{
+	tlog_trace("(d=%p, event_cb=%p)",
+			(void*)d, (void*)((uintptr_t)event_cb));
+	return false;
+}
+
+bool
+evs_set_ready(TL_V, struct evs_desc *d, enum evs_event t)
+{
+	tlog_trace("(d=%p, t=%d)", (void*)d, t);
+	return false;
+}
+
+bool
+evs_set_busy(TL_V, struct evs_desc *d, enum evs_event t)
+{
+	tlog_trace("(d=%p, t=%d)", (void*)d, t);
+	return false;
+}
+
+
