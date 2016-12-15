@@ -5,6 +5,7 @@
 #define _SRC_EVSOCK_1481544106_H_
 
 #include <stdbool.h>
+#include <time.h>
 #include <ev.h>
 
 #include "mempool.h"
@@ -29,6 +30,12 @@ enum evs_event {
 	EVS_ALARM = 32,
 	/* error */
 	EVS_ERROR = 64,
+};
+
+enum evs_type {
+	EVS_SERVER, /* bind() */
+	EVS_CONNECTION, /* connect() */
+	EVS_ACCEPTION, /* listen() */
 };
 
 /* ### Event callbacks ### */
@@ -57,6 +64,7 @@ typedef void(*evs_alarm_cb_t)(struct evs_desc *d);
 
 struct evs {
 	struct mmp *mmp;
+
 	struct ev_loop *loop;
 	bool allocated_loop;
 };
@@ -64,6 +72,12 @@ struct evs {
 struct evs_desc {
 	struct evs *evm;
 
+	int fd;
+
+	enum evs_type type;
+	char addr[EVS_MAX_ADDRESS];
+
+	struct ev_async async;
 	struct ev_io io;
 	/* TODO */
 
@@ -84,7 +98,7 @@ struct evs_desc {
  * 	pointer to new struct evs when evm is NULL
  */
 struct evs *evs_setup(TL_V, struct evs *evm, struct ev_loop *loop);
-/* run loop */
+/* run loop, alternative: ev_run(evm->loop) */
 void evs_loop(TL_V, struct evs *evm);
 /* destroy evs loop */
 void evs_destroy(TL_V, struct evs *evm);
