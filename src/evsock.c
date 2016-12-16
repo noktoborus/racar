@@ -10,7 +10,42 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+#include <arpa/inet.h>
+
 #include "evsock.h"
+
+#define SADDR_MAX 47
+void
+saddr_char(char *str, size_t size, sa_family_t family, struct sockaddr *sa)
+{
+    char xhost[40];
+    unsigned short port = 0;
+    switch(family) {
+    case AF_INET:
+        inet_ntop(AF_INET, &((struct sockaddr_in*)sa)->sin_addr,
+                xhost, sizeof(xhost));
+        port = ntohs(((struct sockaddr_in*)sa)->sin_port);
+        if (port) {
+            snprintf(str, size, "%s:%u", xhost, (unsigned short)port);
+        } else {
+            snprintf(str, size, "%s", xhost);
+        }
+        break;
+    case AF_INET6:
+        inet_ntop(AF_INET6, &((struct sockaddr_in6*)sa)->sin6_addr,
+                xhost, sizeof(xhost));
+        port = ntohs(((struct sockaddr_in6*)sa)->sin6_port);
+        if (port) {
+            snprintf(str, size, "[%s]:%u", xhost, port);
+        } else {
+            snprintf(str, size, "%s", xhost);
+        }
+        break;
+    default:
+        snprintf(str, size, "[unknown fa: %d]", family);
+        break;
+    }
+}
 
 struct evs *
 evs_setup(TL_V, struct evs *evm, struct ev_loop *loop)
@@ -81,6 +116,7 @@ static void
 evs_bind_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 {
 	TL_X;
+	char xaddr[SADDR_MAX] = {0};
 	char host[EVS_MAX_ADDRESS] = {0};
 	char port[6] = "0";
 	char *end = NULL;
@@ -115,6 +151,30 @@ evs_bind_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 		/* TODO: delay... */
 		return;
 	}
+
+	for (rp = result; rp; rp = rp->ai_next) {
+		d->fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+		saddr_char(xaddr, sizeof(xaddr), rp->ai_family, rp->ai_addr);
+		if (d->fd != -1) {
+			tlog_notice("socket(%d, %d, %d) for addr '%s' failed: %s",
+					rp->ai_family, rp->ai_socktype, rp->ai_protocol,
+					xaddr, strerror(errno));
+			continue;
+		}
+
+		if (!(rval = bind(d->fd, rp->ai_addr, rp->ai_addrlen))) {
+			tlog_notice("bind(%s) failed: %s",
+					xaddr, strerror(errno));
+			continue;
+		}
+
+		listen(d->fd, 10);
+		break;
+	}
+
+	freeaddrinfo(result);
+	/* TODO */
+
 }
 
 struct evs_desc *
