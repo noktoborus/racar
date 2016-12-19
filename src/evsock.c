@@ -188,9 +188,39 @@ evs_connect_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 		}
 		/* TODO: delay reconnect */
 	} else {
-		tlog_info("connected to: %s", xaddr);
+		snprintf(d->raddr, sizeof(d->raddr), "%s", xaddr);
+		tlog_info("connected to: %s (%s)", d->addr, d->raddr);
 		/* TODO: start events */
 	}
+
+}
+
+static void
+evs_internal_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
+{
+	TL_X;
+	char xaddr[SADDR_MAX] = {0};
+	struct sockaddr_storage sa = {0};
+	socklen_t sl = sizeof(sa);
+	int fd = -1;
+
+	struct evs_desc *d = (void*)(((char*)w) - offsetof(struct evs_desc, io));
+
+	if (!(revents & EV_READ)) {
+		tlog_warn("called without EV_READ flag", NULL);
+		return;
+	}
+
+	fd = accept(d->fd, (struct sockaddr*)&sa, &sl);
+	if (fd == -1) {
+		tlog_notice("accept(%s) failed: %s", d->addr, strerror(errno));
+		return;
+	}
+
+	saddr_char(xaddr, sizeof(xaddr), sa.ss_family, (struct sockaddr*)&sa);
+	tlog_info("accept(%s) from %s", d->addr, xaddr);
+
+	/* TODO: calloc new evs_desc */
 
 }
 
@@ -276,7 +306,8 @@ evs_bind_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 		}
 		/* TODO: delay */
 	} else {
-		tlog_info("listening: %s", xaddr);
+		snprintf(d->raddr, sizeof(d->raddr), "%s", xaddr);
+		tlog_info("listening: %s (%s)", d->addr, d->raddr);
 		/* TODO: start events */
 	}
 }

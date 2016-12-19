@@ -75,7 +75,10 @@ struct evs_desc {
 	int fd;
 
 	enum evs_type type;
+	/* requested address */
 	char addr[EVS_MAX_ADDRESS];
+	/* resolved address */
+	char raddr[EVS_MAX_ADDRESS];
 
 	struct ev_async async;
 	struct ev_io io;
