@@ -113,6 +113,88 @@ evs_desc_destroy(struct evs_desc *d)
 }
 
 static void
+evs_connect_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
+{
+	TL_X;
+	char xaddr[SADDR_MAX] = {0};
+	char host[EVS_MAX_ADDRESS] = {0};
+	char port[6] = "0";
+	char *end = NULL;
+
+	struct addrinfo hints = {0};
+	struct addrinfo *result = NULL;
+	struct addrinfo *rp = NULL;
+	int rval = 0;
+
+	struct evs_desc *d = (void*)(((char*)w) - offsetof(struct evs_desc, async));
+
+	tlog_trace("(loop=%p, w=%p, revents=%d)",
+			(void*)loop, (void*)w, revents);
+
+	if (d->fd != -1) {
+		tlog_notice("invalid fd for (re)connect: %d", d->fd);
+		return;
+	}
+
+	if (!(end = strrchr(d->addr, ':'))) {
+		tlog_notice("not port passed in addr: '%s', using default value: %s",
+				d->addr, port);
+	} else {
+		snprintf(host, sizeof(host), "%*s", (int)(port - d->addr), d->addr);
+		snprintf(port, sizeof(port), "%s", end);
+	}
+
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+
+	rval = getaddrinfo(host, port, &hints, &result);
+	if (rval != 0) {
+		tlog_notice("getaddrinfo(%s, %s) failed: %s",
+				host, port, gai_strerror(rval));
+		/* TODO: delay reconnect... */
+		return;
+	}
+
+	for (rp = result; rp; rp = rp->ai_next) {
+		if (d->fd != -1) {
+			close(d->fd);
+		}
+
+		saddr_char(xaddr, sizeof(xaddr), rp->ai_family, rp->ai_addr);
+		/* allocate new socket */
+		d->fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+		if (d->fd == -1) {
+			tlog_notice("socket(%d, %d, %d) for addr '%s' failed: %s",
+					rp->ai_family, rp->ai_socktype, rp->ai_protocol,
+					xaddr, strerror(errno));
+			continue;
+		}
+
+		if (connect(d->fd, rp->ai_addr, rp->ai_addrlen) != 0) {
+			tlog_notice("connect(%s) failed: %s", xaddr, strerror(errno));
+			continue;
+		}
+
+		break;
+	}
+
+	freeaddrinfo(result);
+
+	/* onfail cleanup */
+	if (!rp) {
+		if (d->fd != -1) {
+			close(d->fd);
+			d->fd = -1;
+		}
+		/* TODO: delay reconnect */
+	} else {
+		tlog_info("connected to: %s", xaddr);
+		/* TODO: start events */
+	}
+
+}
+
+static void
 evs_bind_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 {
 	TL_X;
@@ -137,11 +219,15 @@ evs_bind_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 	}
 
 	if (!(end = strrchr(d->addr, ':'))) {
-		tlog_notice("not port passed in addr: '%s', using default value: %s", d->addr, port);
+		tlog_notice("not port passed in addr: '%s', using default value: %s",
+				d->addr, port);
 	} else {
 		snprintf(host, sizeof(host), "%*s", (int)(port - d->addr), d->addr);
 		snprintf(port, sizeof(port), "%s", end);
 	}
+
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
 
 	/* list addresses */
 	rval = getaddrinfo(host, port, &hints, &result);
@@ -153,28 +239,46 @@ evs_bind_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 	}
 
 	for (rp = result; rp; rp = rp->ai_next) {
-		d->fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		saddr_char(xaddr, sizeof(xaddr), rp->ai_family, rp->ai_addr);
+		/* prevent leaks */
 		if (d->fd != -1) {
+			close(d->fd);
+		}
+
+		saddr_char(xaddr, sizeof(xaddr), rp->ai_family, rp->ai_addr);
+		/* allocate new socket */
+		d->fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+		if (d->fd == -1) {
 			tlog_notice("socket(%d, %d, %d) for addr '%s' failed: %s",
 					rp->ai_family, rp->ai_socktype, rp->ai_protocol,
 					xaddr, strerror(errno));
 			continue;
 		}
 
-		if (!(rval = bind(d->fd, rp->ai_addr, rp->ai_addrlen))) {
-			tlog_notice("bind(%s) failed: %s",
-					xaddr, strerror(errno));
+		if ((rval = bind(d->fd, rp->ai_addr, rp->ai_addrlen)) != 0) {
+			tlog_notice("bind(%s) failed: %s", xaddr, strerror(errno));
 			continue;
 		}
 
-		listen(d->fd, 10);
+		if (listen(d->fd, 10) != 0) {
+			tlog_notice("listen(%s) failed: %s", xaddr, strerror(errno));
+			continue;
+		}
 		break;
 	}
 
 	freeaddrinfo(result);
-	/* TODO */
 
+	/* onfail cleanup */
+	if (!rp) {
+		if (d->fd != -1) {
+			close(d->fd);
+			d->fd = -1;
+		}
+		/* TODO: delay */
+	} else {
+		tlog_info("listening: %s", xaddr);
+		/* TODO: start events */
+	}
 }
 
 struct evs_desc *
@@ -210,10 +314,29 @@ evs_bind(TL_V, struct evs *evm, const char *address, evs_accept_cb_t event_cb)
 struct evs_desc *
 evs_connect(TL_V, struct evs *evm, const char *address, evs_connect_cb_t event_cb)
 {
+	struct evs_desc *d = NULL;
+
 	tlog_trace("(evm=%p, address=%p [%s], event_cb=%p)",
 			(void*)evm, (void*)address, (address ? address : ""), (void*)((uintptr_t)event_cb));
 
-	return NULL;
+	if (!(d = mmp_calloc(evm->mmp, sizeof(*d)))) {
+		tlog_error("calloc(%d) faled: %s", sizeof(*d), strerror(errno));
+		return NULL;
+	}
+
+	strncat(d->addr, address, sizeof(d->addr) - 1);
+	d->fd = -1;
+	d->evm = evm;
+	d->type = EVS_CONNECTION;
+
+	mmp_modify(evm->mmp, (void*)d, (void(*)())evs_desc_destroy);
+
+	/* init */
+	ev_async_init(&d->async, evs_connect_async_cb);
+	ev_async_start(evm->loop, &d->async);
+
+	ev_async_send(evm->loop, &d->async);
+	return d;
 }
 
 bool

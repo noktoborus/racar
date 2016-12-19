@@ -109,6 +109,7 @@ bool evs_close(TL_V, struct evs_desc *d);
 
 /* bind socket to address
  * call to event_cb when socket connected or close
+ * must be run before evs_loop() or funcs, called inside loop
  */
 struct evs_desc *evs_bind(TL_V, struct evs *evm, const char *address, evs_accept_cb_t event_cb);
 /* connect to address
