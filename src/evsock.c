@@ -196,6 +196,11 @@ evs_connect_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 }
 
 static void
+evs_internal_accept_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
+{
+}
+
+static void
 evs_internal_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
 	TL_X;
@@ -203,7 +208,7 @@ evs_internal_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 	struct sockaddr_storage sa = {0};
 	socklen_t sl = sizeof(sa);
 	int fd = -1;
-
+	struct evs_desc *nd = NULL;
 	struct evs_desc *d = (void*)(((char*)w) - offsetof(struct evs_desc, io));
 
 	if (!(revents & EV_READ)) {
@@ -218,10 +223,36 @@ evs_internal_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 	}
 
 	saddr_char(xaddr, sizeof(xaddr), sa.ss_family, (struct sockaddr*)&sa);
+
+	if (!d->accept) {
+		tlog_notice("accept(%s) from %s canceled: no accept function",
+				d->addr, xaddr);
+		close(fd);
+		return;
+	}
+
+	if (!(nd = mmp_calloc(d->evm->mmp, sizeof(*nd)))) {
+		tlog_error("accept(%s) from %s canceled: calloc(%d) failed: %s",
+				d->addr, xaddr,
+				sizeof(*d), strerror(errno));
+		close(fd);
+		return;
+	}
+
+	strncat(nd->addr, d->addr, sizeof(d->addr) - 1);
+	strncat(nd->raddr, xaddr, sizeof(d->raddr) - 1);
+	nd->fd = fd;
+	nd->evm = d->evm;
+	nd->type = EVS_ACCEPTION;
+
+	mmp_modify(nd->evm->mmp, (void*)nd, (void(*)())evs_desc_destroy);
+
 	tlog_info("accept(%s) from %s", d->addr, xaddr);
 
-	/* TODO: calloc new evs_desc */
+	ev_async_init(&nd->async, evs_internal_accept_async_cb);
+	ev_async_start(nd->evm->loop, &nd->async);
 
+	/* TODO: start io */
 }
 
 static void
