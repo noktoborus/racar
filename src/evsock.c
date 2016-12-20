@@ -47,6 +47,30 @@ saddr_char(char *str, size_t size, sa_family_t family, struct sockaddr *sa)
     }
 }
 
+static void
+evs_internal_signal_int_cb(struct ev_loop *loop, struct ev_signal *w, int revents)
+{
+	TL_X;
+
+	struct evs *evm = (void*)(((char*)w) - offsetof(struct evs, sigint));
+
+	tlog_trace("(loop=%p, w=%p [%p], revents=%d)",
+			(void*)loop, (void*)w, (void*)evm, revents);
+
+	ev_break(loop, EVBREAK_ALL);
+}
+
+static void
+evs_internal_signal_pipe_cb(struct ev_loop *loop, struct ev_signal *w, int revents)
+{
+	TL_X;
+
+	struct evs *evm = (void*)(((char*)w) - offsetof(struct evs, sigint));
+
+	tlog_trace("(loop=%p, w=%p [%p], revents=%d)",
+			(void*)loop, (void*)w, (void*)evm, revents);
+}
+
 struct evs *
 evs_setup(TL_V, struct evs *evm, struct ev_loop *loop)
 {
@@ -79,6 +103,12 @@ evs_setup(TL_V, struct evs *evm, struct ev_loop *loop)
 	} else {
 		evm->loop = ev_default_loop(0);
 		evm->allocated_loop = true;
+
+		/* setup signal handler */
+		ev_signal_init(&evm->sigint, evs_internal_signal_int_cb, SIGINT);
+		ev_signal_init(&evm->sigpipe, evs_internal_signal_pipe_cb, SIGPIPE);
+		ev_signal_start(evm->loop, &evm->sigint);
+		ev_signal_start(evm->loop, &evm->sigpipe);
 	}
 
 	return evm;
@@ -97,6 +127,9 @@ evs_destroy(TL_V, struct evs *evm)
 		ev_loop_destroy(evm->loop);
 	}
 
+	ev_signal_stop(evm->loop, &evm->sigint);
+	ev_signal_stop(evm->loop, &evm->sigpipe);
+
 	memset(evm, 0u, sizeof(*evm));
 	mmp_destroy(mmp);
 }
@@ -105,6 +138,10 @@ evs_destroy(TL_V, struct evs *evm)
 static void
 evs_desc_destroy(struct evs_desc *d)
 {
+	TL_X;
+
+	tlog_trace("(d=%p)", (void*)d);
+
 	ev_async_stop(d->evm->loop, &d->async);
 
 	if (d->fd != -1) {
@@ -113,7 +150,18 @@ evs_desc_destroy(struct evs_desc *d)
 }
 
 static void
-evs_connect_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
+evs_internal_connection_io_cb(struct ev_loop *loop, struct ev_io *w, int revents)
+{
+	TL_X;
+
+	struct evs_desc *d = (void*)(((char*)w) - offsetof(struct evs_desc, io));
+
+	tlog_trace("(loop=%p, w=%p [%p], revents=%d)",
+			(void*)loop, (void*)w, (void*)d, revents);
+}
+
+static void
+evs_internal_connection_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 {
 	TL_X;
 	char xaddr[SADDR_MAX] = {0};
@@ -139,9 +187,10 @@ evs_connect_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 	if (!(end = strrchr(d->addr, ':'))) {
 		tlog_notice("not port passed in addr: '%s', using default value: %s",
 				d->addr, port);
+		strncpy(host, d->addr, sizeof(host) - 1);
 	} else {
-		snprintf(host, sizeof(host), "%*s", (int)(port - d->addr), d->addr);
-		snprintf(port, sizeof(port), "%s", end);
+		snprintf(host, sizeof(host), "%.*s", (int)(end - d->addr), d->addr);
+		snprintf(port, sizeof(port), "%s", end + 1);
 	}
 
 	hints.ai_family = AF_UNSPEC;
@@ -190,18 +239,43 @@ evs_connect_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 	} else {
 		snprintf(d->raddr, sizeof(d->raddr), "%s", xaddr);
 		tlog_info("connected to: %s (%s)", d->addr, d->raddr);
+		/* call event */
+		if (d->connect) {
+			(*d->connect)(d, d->raddr);
+		}
 		/* TODO: start events */
+		ev_io_init(&d->io, evs_internal_connection_io_cb, d->fd,
+				(((d->read) ? EV_READ : EV_NONE) | ((d->write) ? EV_WRITE : EV_NONE)));
+		ev_io_start(d->evm->loop, &d->io);
 	}
 
 }
 
 static void
-evs_internal_accept_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
+evs_internal_acception_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 {
+	TL_X;
+
+	struct evs_desc *d = (void*)(((char*)w) - offsetof(struct evs_desc, async));
+
+	tlog_trace("(loop=%p, w=%p [%p], revents=%d)",
+			(void*)loop, (void*)w, (void*)d, revents);
 }
 
 static void
-evs_internal_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
+evs_internal_acception_io_cb(struct ev_loop *loop, struct ev_io *w, int revents)
+{
+	TL_X;
+
+	struct evs_desc *d = (void*)(((char*)w) - offsetof(struct evs_desc, async));
+
+	tlog_trace("(loop=%p, w=%p [%p], revents=%d)",
+			(void*)loop, (void*)w, (void*)d, revents);
+
+}
+
+static void
+evs_internal_bind_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 {
 	TL_X;
 	char xaddr[SADDR_MAX] = {0};
@@ -210,6 +284,9 @@ evs_internal_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 	int fd = -1;
 	struct evs_desc *nd = NULL;
 	struct evs_desc *d = (void*)(((char*)w) - offsetof(struct evs_desc, io));
+
+	tlog_trace("(loop=%p, w=%p [%p], revents=%d)",
+			(void*)loop, (void*)w, (void*)d, revents);
 
 	if (!(revents & EV_READ)) {
 		tlog_warn("called without EV_READ flag", NULL);
@@ -245,18 +322,34 @@ evs_internal_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 	nd->evm = d->evm;
 	nd->type = EVS_ACCEPTION;
 
+	(*d->accept)(d, nd, xaddr);
+
+	/* close acception when write or read handlers not defined */
+	if (!d->read && !d->write) {
+		tlog_info("accept(%s) from %s canceled: "
+			   "read or write handlers not defined",
+			   d->addr, xaddr);
+		close(fd);
+		mmp_free(nd);
+		return;
+	}
+
+	/* continue initialize structure */
 	mmp_modify(nd->evm->mmp, (void*)nd, (void(*)())evs_desc_destroy);
 
 	tlog_info("accept(%s) from %s", d->addr, xaddr);
 
-	ev_async_init(&nd->async, evs_internal_accept_async_cb);
+	/* start event */
+	ev_async_init(&nd->async, evs_internal_acception_async_cb);
 	ev_async_start(nd->evm->loop, &nd->async);
 
-	/* TODO: start io */
+	ev_io_init(&nd->io, evs_internal_acception_io_cb, nd->fd,
+			(((d->read) ? EV_READ : EV_NONE) | ((d->write) ? EV_WRITE : EV_NONE)));
+	ev_io_start(nd->evm->loop, &nd->io);
 }
 
 static void
-evs_bind_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
+evs_internal_bind_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 {
 	TL_X;
 	char xaddr[SADDR_MAX] = {0};
@@ -271,8 +364,8 @@ evs_bind_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 
 	struct evs_desc *d = (void*)(((char*)w) - offsetof(struct evs_desc, async));
 
-	tlog_trace("(loop=%p, w=%p, revents=%d)",
-			(void*)loop, (void*)w, revents);
+	tlog_trace("(loop=%p, w=%p [%p], revents=%d)",
+			(void*)loop, (void*)w, (void*)d, revents);
 
 	if (d->fd != -1) {
 		tlog_notice("invalid fd for (re)bind: %d", d->fd);
@@ -282,9 +375,10 @@ evs_bind_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 	if (!(end = strrchr(d->addr, ':'))) {
 		tlog_notice("not port passed in addr: '%s', using default value: %s",
 				d->addr, port);
+		strncpy(host, d->addr, sizeof(host) - 1);
 	} else {
-		snprintf(host, sizeof(host), "%*s", (int)(port - d->addr), d->addr);
-		snprintf(port, sizeof(port), "%s", end);
+		snprintf(host, sizeof(host), "%.*s", (int)(end - d->addr), d->addr);
+		snprintf(port, sizeof(port), "%s", end + 1);
 	}
 
 	hints.ai_family = AF_UNSPEC;
@@ -293,8 +387,8 @@ evs_bind_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 	/* list addresses */
 	rval = getaddrinfo(host, port, &hints, &result);
 	if (rval != 0) {
-		tlog_notice("getaddrinfo(%s, %s) failed: %s",
-				host, port, gai_strerror(rval));
+		tlog_notice("getaddrinfo(%s, %s) [%s] failed: %s",
+				host, port, d->addr, gai_strerror(rval));
 		/* TODO: delay... */
 		return;
 	}
@@ -339,7 +433,9 @@ evs_bind_async_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 	} else {
 		snprintf(d->raddr, sizeof(d->raddr), "%s", xaddr);
 		tlog_info("listening: %s (%s)", d->addr, d->raddr);
-		/* TODO: start events */
+		/* start events */
+		ev_io_init(&d->io, evs_internal_bind_accept_cb, d->fd, EV_READ);
+		ev_io_start(d->evm->loop, &d->io);
 	}
 }
 
@@ -361,15 +457,16 @@ evs_bind(TL_V, struct evs *evm, const char *address, evs_accept_cb_t event_cb)
 	d->fd = -1;
 	d->evm = evm;
 	d->type = EVS_SERVER;
+	d->accept = event_cb;
 
 	mmp_modify(evm->mmp, (void*)d, (void(*)())evs_desc_destroy);
 
 	/* init events */
-	ev_async_init(&d->async, evs_bind_async_cb);
-	ev_async_start(evm->loop, &d->async);
+	ev_async_init(&d->async, evs_internal_bind_cb);
+	ev_async_start(d->evm->loop, &d->async);
 
 	/* begin event */
-	ev_async_send(evm->loop, &d->async);
+	ev_async_send(d->evm->loop, &d->async);
 	return d;
 }
 
@@ -390,11 +487,12 @@ evs_connect(TL_V, struct evs *evm, const char *address, evs_connect_cb_t event_c
 	d->fd = -1;
 	d->evm = evm;
 	d->type = EVS_CONNECTION;
+	d->connect = event_cb;
 
 	mmp_modify(evm->mmp, (void*)d, (void(*)())evs_desc_destroy);
 
 	/* init */
-	ev_async_init(&d->async, evs_connect_async_cb);
+	ev_async_init(&d->async, evs_internal_connection_async_cb);
 	ev_async_start(evm->loop, &d->async);
 
 	ev_async_send(evm->loop, &d->async);
@@ -423,4 +521,10 @@ evs_set_busy(TL_V, struct evs_desc *d, enum evs_event t)
 	return false;
 }
 
+void
+evs_loop(TL_V, struct evs *evm)
+{
+	tlog_trace("(evm=%p)", (void*)evm);
+	ev_run(evm->loop, 0);
+}
 

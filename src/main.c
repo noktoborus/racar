@@ -36,6 +36,11 @@ begin(TL_V)
 
 	mdl_log_tree(TL_A, &mdl, NULL);
 
+	evs_bind(TL_A, &evs, "127.0.0.1:2234", NULL);
+	/*evs_connect(TL_A, &evs, "127.0.0.1:2234", NULL);*/
+
+	evs_loop(TL_A, &evs);
+
 	/* deinit */
 	mdl_deinit(TL_A, &mdl);
 	mm_deinitialize(TL_A);

@@ -65,6 +65,9 @@ typedef void(*evs_alarm_cb_t)(struct evs_desc *d);
 struct evs {
 	struct mmp *mmp;
 
+	struct ev_signal sigint;
+	struct ev_signal sigpipe;
+
 	struct ev_loop *loop;
 	bool allocated_loop;
 };
