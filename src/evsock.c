@@ -118,20 +118,21 @@ void
 evs_destroy(TL_V, struct evs *evm)
 {
 	struct mmp *mmp = NULL;
+	struct ev_loop *loop = NULL;
 
 	tlog_trace("(evm=%p)", (void*)evm);
 
+	loop = (evm->allocated_loop ? evm->loop : NULL);
 	mmp = evm->mmp;
-
-	if (evm->allocated_loop) {
-		ev_loop_destroy(evm->loop);
-	}
 
 	ev_signal_stop(evm->loop, &evm->sigint);
 	ev_signal_stop(evm->loop, &evm->sigpipe);
 
-	memset(evm, 0u, sizeof(*evm));
 	mmp_destroy(mmp);
+
+	if (loop) {
+		ev_loop_destroy(loop);
+	}
 }
 
 
@@ -434,6 +435,9 @@ evs_internal_bind_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 		snprintf(d->raddr, sizeof(d->raddr), "%s", xaddr);
 		tlog_info("listening: %s (%s)", d->addr, d->raddr);
 		/* start events */
+		/* FIXME: events must be started in evs_bind()
+		 * 	or used bool flags (io_inited, async_inited, etc)
+		 */
 		ev_io_init(&d->io, evs_internal_bind_accept_cb, d->fd, EV_READ);
 		ev_io_start(d->evm->loop, &d->io);
 	}
