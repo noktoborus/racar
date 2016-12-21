@@ -18,6 +18,29 @@
 
 #include "evsock.h"
 
+ssize_t
+echo_read_cb(struct evs_desc *d, const char *src, size_t src_size)
+{
+	return 0u;
+}
+
+ssize_t
+echo_write_cb(struct evs_desc *d, char *dst, size_t dst_size)
+{
+	return 0u;
+}
+
+void
+echo_accept_cb(struct evs_desc *d, struct evs_desc *accept, const char addr[EVS_MAX_ADDRESS])
+{
+	TL_X;
+
+	tlog_info("echo accepted address: %s", addr);
+
+	evs_set_event(TL_A, d, EVS_WRITE, (evs_event_cb_t)echo_write_cb);
+	evs_set_event(TL_A, d, EVS_READ, (evs_event_cb_t)echo_read_cb);
+}
+
 void
 begin(TL_V)
 {
@@ -36,7 +59,7 @@ begin(TL_V)
 
 	mdl_log_tree(TL_A, &mdl, NULL);
 
-	evs_bind(TL_A, &evs, "127.0.0.1:2234", NULL);
+	evs_bind(TL_A, &evs, "127.0.0.1:2234", echo_accept_cb);
 	/*evs_connect(TL_A, &evs, "127.0.0.1:2234", NULL);*/
 
 	evs_loop(TL_A, &evs);

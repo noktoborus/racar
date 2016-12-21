@@ -46,11 +46,11 @@ typedef size_t(*evs_event_cb_t)(struct evs_desc *d);
  * must be return stored data, if rvalue < src_size then unreaded data stored in buffer
  * and passed on next iteration
  */
-typedef size_t(*evs_read_cb_t)(struct evs_desc *d, const char *src, size_t src_size);
+typedef ssize_t(*evs_read_cb_t)(struct evs_desc *d, const char *src, size_t src_size);
 /* copy from callback to socket
  * must be return count of writed to *dst bytes
  */
-typedef size_t(*evs_write_cb_t)(struct evs_desc *d, char *dst, size_t dst_size);
+typedef ssize_t(*evs_write_cb_t)(struct evs_desc *d, char *dst, size_t dst_size);
 /* execute on error (read or write) */
 typedef void(*evs_error_cb_t)(struct evs_desc *d, enum evs_event e, const char *message);
 /* if read/write callback not setted on *accept, then acception canceled */
@@ -92,6 +92,10 @@ struct evs_desc {
 	evs_error_cb_t error;
 	evs_accept_cb_t accept;
 	evs_connect_cb_t connect;
+	evs_disconnect_cb_t disconnect;
+
+	/* configuration */
+	size_t socket_block_size;
 };
 
 /* ### Initialization functions ### */
@@ -125,7 +129,7 @@ struct evs_desc *evs_connect(TL_V, struct evs *evm, const char *address, evs_con
 /* ### configuration funcs ### */
 
 /* set event callback */
-bool evs_set_event(TL_V, struct evs_desc *d, evs_event_cb_t event_cb);
+bool evs_set_event(TL_V, struct evs_desc *d, enum evs_event e, evs_event_cb_t event_cb);
 /* set ready for event, events may be multiplexed (EVS_WRITE | EVS_READ) */
 bool evs_set_ready(TL_V, struct evs_desc *d, enum evs_event t);
 /* set busy for event, similar to evs_set_ready() */

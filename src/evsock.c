@@ -47,6 +47,14 @@ saddr_char(char *str, size_t size, sa_family_t family, struct sockaddr *sa)
     }
 }
 
+/* setup default values */
+static void
+evs_internal_desc_setup(TL_V, struct evs_desc *d)
+{
+	tlog_trace("(d=%p)", (void*)d);
+	d->socket_block_size = 4098;
+}
+
 static void
 evs_internal_signal_int_cb(struct ev_loop *loop, struct ev_signal *w, int revents)
 {
@@ -69,6 +77,7 @@ evs_internal_signal_pipe_cb(struct ev_loop *loop, struct ev_signal *w, int reven
 
 	tlog_trace("(loop=%p, w=%p [%p], revents=%d)",
 			(void*)loop, (void*)w, (void*)evm, revents);
+
 }
 
 struct evs *
@@ -157,9 +166,65 @@ evs_internal_connection_io_cb(struct ev_loop *loop, struct ev_io *w, int revents
 	TL_X;
 
 	struct evs_desc *d = (void*)(((char*)w) - offsetof(struct evs_desc, io));
+	/* alloca()'s alternative */
+	char buffer[d->socket_block_size];
+	ssize_t rval = 0;
+
+	memset(buffer, 0u, d->socket_block_size);
 
 	tlog_trace("(loop=%p, w=%p [%p], revents=%d)",
 			(void*)loop, (void*)w, (void*)d, revents);
+
+	if (revents & EV_READ) {
+		rval = read(d->fd, buffer, d->socket_block_size);
+		if (rval == -1) {
+			if (errno == EAGAIN) {
+				/* FIXME: ? */
+			} else {
+				if (d->error) {
+					(*d->error)(d, EVS_READ, strerror(errno));
+				}
+				tlog_info("desc#%p read error: %s", (void*)d, strerror(errno));
+			}
+		} else if (rval == 0) {
+			/* close */
+			tlog_info("desc#%p disconnect", (void*)d);
+			if (d->disconnect) {
+				(*d->disconnect)(d, d->raddr);
+			}
+			mmp_free(d);
+			return;
+		} else if (d->read) {
+			/* pass data */
+			rval = (*d->read)(d, buffer, (size_t)rval);
+			if (!rval) {
+				/* close connection */
+				if (d->disconnect) {
+					(*d->disconnect)(d, d->raddr);
+				}
+				tlog_info("desc#%p read handler discard data, close connection",
+						(void*)d);
+			}
+		} else {
+			tlog_notice("desc#%p no read handler, close connection", (void*)d);
+			if (d->disconnect) {
+				(*d->disconnect)(d, d->raddr);
+			}
+			/* close */
+			mmp_free(d);
+			return;
+		}
+	}
+
+	if (revents & EV_WRITE) {
+		if (!d->write) {
+			/* TODO */
+			tlog_notice("desc#%p no write handler, close connection", (void*)d);
+			mmp_free(d);
+			return;
+		}
+		/* TODO */
+	}
 }
 
 static void
@@ -323,6 +388,7 @@ evs_internal_bind_accept_cb(struct ev_loop *loop, struct ev_io *w, int revents)
 	nd->fd = fd;
 	nd->evm = d->evm;
 	nd->type = EVS_ACCEPTION;
+	evs_internal_desc_setup(TL_A, nd);
 
 	(*d->accept)(d, nd, xaddr);
 
@@ -411,6 +477,8 @@ evs_internal_bind_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 			continue;
 		}
 
+		setsockopt(d->fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int));
+
 		if ((rval = bind(d->fd, rp->ai_addr, rp->ai_addrlen)) != 0) {
 			tlog_notice("bind(%s) failed: %s", xaddr, strerror(errno));
 			continue;
@@ -460,6 +528,7 @@ evs_bind(TL_V, struct evs *evm, const char *address, evs_accept_cb_t event_cb)
 	d->evm = evm;
 	d->type = EVS_SERVER;
 	d->accept = event_cb;
+	evs_internal_desc_setup(TL_A, d);
 
 	mmp_modify(evm->mmp, (void*)d, (void(*)())evs_desc_destroy);
 
@@ -490,6 +559,7 @@ evs_connect(TL_V, struct evs *evm, const char *address, evs_connect_cb_t event_c
 	d->evm = evm;
 	d->type = EVS_CONNECTION;
 	d->connect = event_cb;
+	evs_internal_desc_setup(TL_A, d);
 
 	mmp_modify(evm->mmp, (void*)d, (void(*)())evs_desc_destroy);
 
@@ -502,11 +572,59 @@ evs_connect(TL_V, struct evs *evm, const char *address, evs_connect_cb_t event_c
 }
 
 bool
-evs_set_event(TL_V, struct evs_desc *d, evs_event_cb_t event_cb)
+evs_set_event(TL_V, struct evs_desc *d, enum evs_event e, evs_event_cb_t event_cb)
 {
+	evs_event_cb_t old_event_cb = NULL;
+	const char *pt = NULL;
+
 	tlog_trace("(d=%p, event_cb=%p)",
 			(void*)d, (void*)((uintptr_t)event_cb));
-	return false;
+
+	switch (e) {
+		case EVS_ACCEPT:
+			pt = "ACCEPT";
+			old_event_cb = (evs_event_cb_t)d->accept;
+			d->accept = (evs_accept_cb_t)event_cb;
+			break;
+		case EVS_CONNECT:
+			pt = "CONNECT";
+			old_event_cb = (evs_event_cb_t)d->connect;
+			d->connect = (evs_connect_cb_t)event_cb;
+			break;
+		case EVS_DISCONNECT:
+			pt = "DISCONNECT";
+			old_event_cb = (evs_event_cb_t)d->disconnect;
+			d->disconnect = (evs_connect_cb_t)event_cb;
+			break;
+		case EVS_READ:
+			pt = "READ";
+			old_event_cb = (evs_event_cb_t)d->read;
+			d->read = (evs_read_cb_t)event_cb;
+			break;
+		case EVS_WRITE:
+			pt = "WRITE";
+			old_event_cb = (evs_event_cb_t)d->write;
+			d->write = (evs_write_cb_t)event_cb;
+			break;
+		case EVS_ALARM:
+			pt = "ALARM";
+			/*
+			old_event_cb = (evs_event_cb_t)d->alarm;
+			d->alarm = (evs_alarm_cb_t)event_cb;
+			*/
+			break;
+		case EVS_ERROR:
+			pt = "ERROR";
+			old_event_cb = (evs_event_cb_t)d->error;
+			d->error = (evs_error_cb_t)event_cb;
+			break;
+	}
+
+	tlog_debug("d=%p, set new event handler (type: %s) %p, old: %p",
+			(void*)d, pt,
+			(void*)(uintptr_t)event_cb, (void*)(uintptr_t)old_event_cb);
+
+	return true;
 }
 
 bool
