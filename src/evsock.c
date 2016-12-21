@@ -144,6 +144,7 @@ evs_desc_destroy(struct evs_desc *d)
 	tlog_trace("(d=%p)", (void*)d);
 
 	ev_async_stop(d->evm->loop, &d->async);
+	ev_io_stop(d->evm->loop, &d->io);
 
 	if (d->fd != -1) {
 		close(d->fd);
@@ -435,9 +436,6 @@ evs_internal_bind_cb(struct ev_loop *loop, struct ev_async *w, int revents)
 		snprintf(d->raddr, sizeof(d->raddr), "%s", xaddr);
 		tlog_info("listening: %s (%s)", d->addr, d->raddr);
 		/* start events */
-		/* FIXME: events must be started in evs_bind()
-		 * 	or used bool flags (io_inited, async_inited, etc)
-		 */
 		ev_io_init(&d->io, evs_internal_bind_accept_cb, d->fd, EV_READ);
 		ev_io_start(d->evm->loop, &d->io);
 	}
