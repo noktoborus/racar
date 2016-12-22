@@ -124,7 +124,8 @@ evs_setup(TL_V, struct evs *evm, struct ev_loop *loop)
 }
 
 void
-evs_destroy(TL_V, struct evs *evm)
+evs_
+/* TODO: ... */destroy(TL_V, struct evs *evm)
 {
 	struct mmp *mmp = NULL;
 	struct ev_loop *loop = NULL;
@@ -202,8 +203,9 @@ evs_internal_connection_io_cb(struct ev_loop *loop, struct ev_io *w, int revents
 				if (d->disconnect) {
 					(*d->disconnect)(d, d->raddr);
 				}
-				tlog_info("desc#%p read handler discard data, close connection",
+				tlog_info("desc#%p read handler discard data, exclude handler",
 						(void*)d);
+				evs_set_busy(TL_A, d, EVS_READ);
 			}
 		} else {
 			tlog_notice("desc#%p no read handler, close connection", (void*)d);
@@ -223,7 +225,20 @@ evs_internal_connection_io_cb(struct ev_loop *loop, struct ev_io *w, int revents
 			mmp_free(d);
 			return;
 		}
-		/* TODO */
+		rval = (*d->write)(d, buffer, d->socket_block_size);
+		if (!rval) {
+			tlog_notice("desc#%p no write data, exclude handler", (void*)d);
+			evs_set_busy(TL_A, d, EVS_WRITE);
+		}
+		rval = write(d->fd, buffer, (size_t)rval);
+		if (rval == -1) {
+			tlog_info("desc#%p write error: %s", (void*)d, strerror(errno));
+			/* TODO: */
+		} else if (rval == 0) {
+			/* TODO */
+		} else {
+			/* TODO */
+		}
 	}
 }
 
