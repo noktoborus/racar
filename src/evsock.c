@@ -124,8 +124,7 @@ evs_setup(TL_V, struct evs *evm, struct ev_loop *loop)
 }
 
 void
-evs_
-/* TODO: ... */destroy(TL_V, struct evs *evm)
+evs_destroy(TL_V, struct evs *evm)
 {
 	struct mmp *mmp = NULL;
 	struct ev_loop *loop = NULL;
