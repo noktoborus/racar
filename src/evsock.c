@@ -665,18 +665,69 @@ evs_set_event(TL_V, struct evs_desc *d, enum evs_event e, evs_event_cb_t event_c
 	return true;
 }
 
+static void
+evs_internal_cleanup(TL_V, struct evs_desc *d)
+{
+	/* FIXME: potentialy segfault */
+	tlog_trace("(d=%p)", (void*)d);
+	/* check events */
+
+	if (d->io.events == EV_NONE) {
+		tlog_info("desc#%p: no events, close connection", (void*)d);
+		mmp_free(d);
+	}
+}
+
 bool
 evs_set_ready(TL_V, struct evs_desc *d, enum evs_event t)
 {
+	int e = EV_NONE;
+
 	tlog_trace("(d=%p, t=%d)", (void*)d, t);
-	return false;
+
+	switch (t) {
+		case EVS_READ:
+			e = EV_READ;
+			break;
+		case EVS_WRITE:
+			e = EV_WRITE;
+			break;
+		default:
+			tlog_warn("desc#%p: event %d not supported now", (void*)d, t);
+			return false;
+	}
+
+	ev_io_stop(d->evm->loop, &d->io);
+	ev_io_set(&d->io, d->fd, d->io.events | e);
+	ev_io_start(d->evm->loop, &d->io);
+	evs_internal_cleanup(TL_A, d);
+	return true;
 }
 
 bool
 evs_set_busy(TL_V, struct evs_desc *d, enum evs_event t)
 {
+	int e = EV_NONE;
+
 	tlog_trace("(d=%p, t=%d)", (void*)d, t);
-	return false;
+
+	switch (t) {
+		case EVS_READ:
+			e = EV_READ;
+			break;
+		case EVS_WRITE:
+			e = EV_WRITE;
+			break;
+		default:
+			tlog_warn("desc#%p: event %d not supported now", (void*)d, t);
+			return false;
+	}
+
+	ev_io_stop(d->evm->loop, &d->io);
+	ev_io_set(&d->io, d->fd, d->io.events & ~e);
+	ev_io_start(d->evm->loop, &d->io);
+	evs_internal_cleanup(TL_A, d);
+	return true;
 }
 
 void
