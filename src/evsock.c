@@ -169,6 +169,7 @@ evs_internal_connection_io_cb(struct ev_loop *loop, struct ev_io *w, int revents
 	/* alloca()'s alternative */
 	char buffer[d->socket_block_size];
 	ssize_t rval = 0;
+	ssize_t rval_std;
 
 	memset(buffer, 0u, d->socket_block_size);
 
@@ -176,17 +177,25 @@ evs_internal_connection_io_cb(struct ev_loop *loop, struct ev_io *w, int revents
 			(void*)loop, (void*)w, (void*)d, revents);
 
 	if (revents & EV_READ) {
-		rval = read(d->fd, buffer, d->socket_block_size);
-		if (rval == -1) {
+		rval_std = read(d->fd, buffer, d->socket_block_size);
+		if (rval_std == -1) {
 			if (errno == EAGAIN) {
 				/* FIXME: ? */
 			} else {
 				if (d->error) {
+					tlog_info("desc#%p read error: %s", (void*)d, strerror(errno));
+					evs_set_busy(TL_A, d, EVS_READ);
 					(*d->error)(d, EVS_READ, strerror(errno));
+				} else {
+					tlog_info("desc#%p read error: %s, close connection",
+							(void*)d, strerror(errno));
+					if (d->disconnect) {
+						(*d->disconnect)(d, d->raddr);
+					}
+					mmp_free(d);
 				}
-				tlog_info("desc#%p read error: %s", (void*)d, strerror(errno));
 			}
-		} else if (rval == 0) {
+		} else if (rval_std == 0) {
 			/* close */
 			tlog_info("desc#%p disconnect", (void*)d);
 			if (d->disconnect) {
@@ -196,7 +205,7 @@ evs_internal_connection_io_cb(struct ev_loop *loop, struct ev_io *w, int revents
 			return;
 		} else if (d->read) {
 			/* pass data */
-			rval = (*d->read)(d, buffer, (size_t)rval);
+			rval = (*d->read)(d, buffer, (size_t)rval_std);
 			if (!rval) {
 				/* close connection */
 				if (d->disconnect) {
@@ -229,14 +238,29 @@ evs_internal_connection_io_cb(struct ev_loop *loop, struct ev_io *w, int revents
 			tlog_notice("desc#%p no write data, exclude handler", (void*)d);
 			evs_set_busy(TL_A, d, EVS_WRITE);
 		}
-		rval = write(d->fd, buffer, (size_t)rval);
-		if (rval == -1) {
-			tlog_info("desc#%p write error: %s", (void*)d, strerror(errno));
-			/* TODO: */
-		} else if (rval == 0) {
-			/* TODO */
+		rval_std = write(d->fd, buffer, (size_t)rval);
+		if (rval_std == -1) {
+			if (d->error) {
+				tlog_info("desc#%p write error: %s", (void*)d, strerror(errno));
+				evs_set_busy(TL_A, d, EVS_WRITE);
+				(*d->error)(d, EVS_WRITE, strerror(errno));
+			} else {
+				tlog_info("desc#%p write error: %s, close connection",
+						(void*)d, strerror(errno));
+				if (d->disconnect) {
+					(*d->disconnect)(d, d->raddr);
+				}
+				mmp_free(d);
+			}
+		} else if (rval_std == rval) {
+			/* FIXME: store data to next write */
+			/* close */
+			tlog_notice("desc#%p written less bytes than gotten (%zd < %zd),"
+				   " close connection",
+				   (void*)d, rval_std, rval);
+			mmp_free(d);
 		} else {
-			/* TODO */
+			/* write ok */
 		}
 	}
 }
