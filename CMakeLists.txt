@@ -10,7 +10,8 @@ endif ()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-include_directories(include)
+enable_testing()
+include_directories(include tests/include)
 
 # *** library
 project(model C)
@@ -52,5 +53,14 @@ if (OPT_MODULE_SIMPLE)
     add_library(module-simple MODULE
         src/modules/simple.c
         )
+endif ()
+
+# *** tests
+option(OPT_TESTS "Build tests" ON)
+if (OPT_TESTS)
+    project(test-main C)
+    
+    add_executable(tests tests/main.c)
+    target_link_libraries(tests model dl ev)
 endif ()
 
