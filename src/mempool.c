@@ -51,6 +51,7 @@ void mmp_clean(struct mmp *m)
 	for (; mn; mn = mn_next) {
 		mn_next = mn->next;
 		_clean_node(mn);
+		m->elements--;
 		free(mn);
 	}
 }
@@ -73,6 +74,8 @@ _assign_node(struct mmp *m, struct mmp_node *mn)
 	m->next = mn;
 
 	mn->m = m;
+
+	m->elements++;
 }
 
 void *
@@ -265,7 +268,7 @@ mmp_free(void *data)
 	if (mn->prev) {
 		mn->prev->next = mn->next;
 	}
-
+	m->elements--;
 	free(mn);
 }
 

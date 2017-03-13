@@ -33,10 +33,10 @@ CHEAT_TEST(mempool_free,
 		cheat_assert((v1 = mmp_malloc(m, 1024)) != NULL);
 		cheat_assert((v2 = mmp_malloc(m, 1024)) != NULL);
 		cheat_assert(mmp_malloc(m, 1024) != NULL);
-		cheat_assert(m->elements == 4);
+		cheat_assert(m->elements == 5);
 		mmp_free(v1);
 		mmp_free(v2);
-		cheat_assert(m->elements == 2);
+		cheat_assert(m->elements == 3);
 		mmp_destroy(m);
 		)
 
