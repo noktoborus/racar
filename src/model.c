@@ -374,23 +374,32 @@ static void
 mdl_log_dive_deep(TL_V, struct mdl *m, struct mdl_node *node, unsigned level, unsigned child)
 {
 	const char *path = NULL;
-	if (!level) {
-		m->printer(NULL, NULL, 0, 0);
-		mdl_log_dive_deep(TL_A, m, node, level + 1, 1u);
-		return;
+	struct mmp *mmp = NULL;
+
+	mmp = mmp_create();
+
+	while (node) {
+		path = NULL;
+
+		if (!level) {
+			m->printer(NULL, NULL, 0, 0);
+			level = 1u;
+			child = 1u;
+		}
+
+		path = mdl_get_path(TL_A, m, NULL, node, mmp);
+		m->printer(node, path, level, child);
+		mmp_free((void*)path);
+
+		if (node->child) {
+			mdl_log_dive_deep(TL_A, m, node->child, level + 1, 1u);
+		}
+
+		node = node->next;
+		child++;
 	}
 
-	path = mdl_get_path(TL_A, m, NULL, node, NULL);
-	m->printer(node, path, level, child);
-	mmp_free((void*)path);
-
-	if (node->child) {
-		mdl_log_dive_deep(TL_A, m, node->child, level + 1, 1u);
-	}
-
-	if (node->next) {
-		mdl_log_dive_deep(TL_A, m, node->next, level, child + 1);
-	}
+	mmp_destroy(mmp);
 }
 
 void
