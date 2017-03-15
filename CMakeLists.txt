@@ -62,5 +62,7 @@ if (OPT_TESTS)
     
     add_executable(tests tests/main.c)
     target_link_libraries(tests model dl ev)
+
+    add_test(main bin/tests)
 endif ()
 
